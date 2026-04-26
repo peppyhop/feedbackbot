@@ -1,3 +1,15 @@
+# FeedbackBot
+
+[![Production](https://github.com/xinha-sh/feedbackbot/actions/workflows/production.yml/badge.svg)](https://github.com/xinha-sh/feedbackbot/actions/workflows/production.yml)
+
+Zero-signup feedback platform on Cloudflare Workers + TanStack Start.
+
+Per-PR previews are wired — opening a pull request deploys an
+isolated stack to a `*.workers.dev` URL and posts the link as a
+comment on the PR.
+
+---
+
 Welcome to your new TanStack Start app! 
 
 # Getting Started
