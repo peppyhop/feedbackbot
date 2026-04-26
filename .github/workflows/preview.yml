@@ -28,15 +28,21 @@ jobs:
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       INTEGRATIONS_ENCRYPTION_KEY: ${{ secrets.INTEGRATIONS_ENCRYPTION_KEY }}
       HMAC_SECRET_SEED: ${{ secrets.HMAC_SECRET_SEED }}
-      # Optional integrations (shared test-mode credentials).
-      DODO_PAYMENTS_API_KEY: ${{ secrets.DODO_PAYMENTS_API_KEY }}
-      DODO_PAYMENTS_WEBHOOK_SECRET: ${{ secrets.DODO_PAYMENTS_WEBHOOK_SECRET }}
-      DODO_PAYMENTS_ENV: test_mode
+      # Email (so magic-link auth works on previews).
       UNOSEND_API_KEY: ${{ secrets.UNOSEND_API_KEY }}
       UNOSEND_FROM: ${{ secrets.UNOSEND_FROM }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
       SLACK_CLIENT_SECRET: ${{ secrets.SLACK_CLIENT_SECRET }}
+      # Dodo billing skipped on previews:
+      #   - The webhook endpoint registered at Dodo points at the
+      #     production apex, so preview checkouts wouldn't reconcile.
+      #   - The live API key in repo secrets shouldn't ever target
+      #     test-mode endpoints.
+      # Result: the billing plugin stays unmounted on previews; the
+      # /signup flow's start-checkout endpoint returns 503 if hit.
+      # Magic-link auth + the rest of the app still work for review.
+      #
       # NOTE: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET are intentionally
       # not passed — alchemy.run.ts zeroes them on non-production stages
       # so the social-github provider stays inactive.
@@ -77,7 +83,7 @@ jobs:
               '',
               url,
               '',
-              '> Magic-link sign-in works. GitHub OAuth + full Dodo billing webhook reconciliation only work on production. See DECISIONS.md for the full caveat list.',
+              '> Magic-link sign-in works. GitHub OAuth and Dodo billing are inactive on previews — see DECISIONS.md for the full caveat list.',
             ].join('\n')
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,

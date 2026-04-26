@@ -24,10 +24,11 @@ jobs:
       # registered against the apex; only this stage has them.
       GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
-      # Shared between preview + prod for now.
+      # Live-mode billing — only on production.
       DODO_PAYMENTS_API_KEY: ${{ secrets.DODO_PAYMENTS_API_KEY }}
       DODO_PAYMENTS_WEBHOOK_SECRET: ${{ secrets.DODO_PAYMENTS_WEBHOOK_SECRET }}
-      DODO_PAYMENTS_ENV: ${{ secrets.DODO_PAYMENTS_ENV }}
+      DODO_PAYMENTS_ENV: live_mode
+      # Email + the rest.
       UNOSEND_API_KEY: ${{ secrets.UNOSEND_API_KEY }}
       UNOSEND_FROM: ${{ secrets.UNOSEND_FROM }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
