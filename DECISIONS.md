@@ -117,6 +117,16 @@ original framing.
 
 ---
 
+## 2026-04-26 — Custom preview subdomain `pr-N.preview.usefeedbackbot.com`
+
+- **Why:** workers.dev URLs in PR comments are noisy and unrelated-looking; preview links that share the apex with production feel like a first-class part of the product.
+- **Cost:** $0/month additional. Cloudflare Workers Custom Domains auto-issues a per-hostname Advanced Certificate, free with Workers. No Advanced Certificate Manager subscription needed.
+- **Mechanism:** `alchemy.run.ts` detects `pr-\d+` stages via regex and attaches `${stage}.preview.usefeedbackbot.com` as the worker's domain (`adopt: true` for idempotency). The `console.log` block now prints the public custom-domain URL instead of `mainApp.url` (which still returns workers.dev even when a domain is attached) so the PR-comment grep picks the right one.
+- **Carve-outs:** stages that don't match `pr-\d+` (e.g. `local-test`, the legacy `dirghaprasad`) keep the workers.dev URL — personal sandboxes don't claim shared `*.preview.usefeedbackbot.com` hostnames.
+- **No DNS pre-config:** `preview.usefeedbackbot.com` is not its own zone. Cloudflare Workers handles per-hostname DNS + cert provisioning automatically when the binding is created. Teardown via `alchemy destroy` removes both.
+
+---
+
 ## 2026-04-25 — Per-PR preview environments + auto-deploy production
 
 - **Goal:** Vercel-style preview URLs on every PR + auto-deploy on merge to `main`.

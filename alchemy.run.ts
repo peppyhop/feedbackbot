@@ -52,6 +52,14 @@ const app = await alchemy('feedbackbot', {
 const STAGE = app.stage
 const IS_PRODUCTION = STAGE === 'production'
 
+// Per-PR preview stages get a pretty subdomain. The regex is strict
+// (`pr-` + digits) so personal sandbox stages (`local-test`,
+// `dirghaprasad`, etc.) never accidentally claim a preview hostname.
+const IS_PR_PREVIEW = /^pr-\d+$/.test(STAGE)
+const PREVIEW_HOST = IS_PR_PREVIEW
+  ? `${STAGE}.preview.usefeedbackbot.com`
+  : null
+
 const PROD_HOST = 'usefeedbackbot.com'
 const PROD_ORIGIN = `https://${PROD_HOST}`
 
@@ -269,15 +277,19 @@ await Worker('fanout-worker', {
 export const mainApp = await TanStackStart(APP_WORKER_ID, {
   compatibility: 'node',
   adopt: true,
-  // Custom domain only on production. `adopt: true` lets a new prod
-  // worker take over the apex binding from a previous stack (e.g.
-  // the legacy -dirghaprasad stack during cutover) instead of failing
-  // because the binding "already exists". Previews use the workers.dev
-  // URL surfaced in the deploy output (see console.log at the bottom
-  // of this file).
+  // Custom domain attachment:
+  //   - production → usefeedbackbot.com
+  //   - pr-N stages → pr-N.preview.usefeedbackbot.com (auto-issued
+  //     SSL via Workers' per-hostname Advanced Cert; Cloudflare
+  //     manages the AAAA record)
+  //   - other stages (local-test, etc.) → workers.dev URL only
+  // `adopt: true` makes attachment idempotent — claims an existing
+  // binding instead of failing with "already exists".
   domains: IS_PRODUCTION
     ? [{ domainName: PROD_HOST, adopt: true }]
-    : undefined,
+    : PREVIEW_HOST
+      ? [{ domainName: PREVIEW_HOST, adopt: true }]
+      : undefined,
   bindings: {
     // storage
     DB: db,
@@ -325,9 +337,18 @@ export const mainApp = await TanStackStart(APP_WORKER_ID, {
   },
 })
 
+// `mainApp.url` returns the workers.dev URL even when a custom
+// domain is attached. For PR comments and operator visibility, we
+// want the public custom-domain URL when one exists.
+const publicUrl = IS_PRODUCTION
+  ? `https://${PROD_HOST}`
+  : PREVIEW_HOST
+    ? `https://${PREVIEW_HOST}`
+    : mainApp.url
+
 console.log({
   stage: STAGE,
-  app: mainApp.url,
+  app: publicUrl,
 })
 
 await app.finalize()
