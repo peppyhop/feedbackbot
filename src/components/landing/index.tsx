@@ -49,27 +49,9 @@ function Nav() {
         <Chip>v0</Chip>
       </span>
       <div className="fb-nav-actions">
-        <span className="fb-nav-anchor">
-          <Btn as="a" href="#how" variant="ghost" size="sm">
-            How it works
-          </Btn>
-        </span>
-        <span className="fb-nav-anchor">
-          <Btn as="a" href="#pricing" variant="ghost" size="sm">
-            Pricing
-          </Btn>
-        </span>
-        <span className="fb-nav-anchor">
-          <Btn as="a" href="#faq" variant="ghost" size="sm">
-            FAQ
-          </Btn>
-        </span>
         <ThemeToggle />
         <Btn as="a" href="/login" variant="ghost" size="sm">
           Sign in
-        </Btn>
-        <Btn as="a" href="#get-started" variant="primary" size="sm">
-          Get the script <ArrowUpRight size={14} strokeWidth={2} />
         </Btn>
       </div>
     </nav>

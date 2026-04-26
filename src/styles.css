@@ -167,8 +167,15 @@ button {
   .hi-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 12px 20px;
+    /* Locks default + sm + icon-only buttons to a consistent height
+       so a row of mixed-content buttons (e.g. ThemeToggle + Sign in)
+       lines up regardless of whether each contains text, icon, or
+       both. Touch override below in @media (pointer: coarse). */
+    min-height: 44px;
+    min-width: 44px;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 15px;
@@ -208,8 +215,10 @@ button {
     transform: translate(-2px, -2px);
   }
   .hi-btn-sm {
-    padding: 7px 14px;
+    padding: 6px 12px;
     font-size: 13px;
+    min-height: 32px;
+    min-width: 32px;
     box-shadow: 3px 3px 0 0 var(--border);
   }
   .hi-btn-sm:hover {
@@ -456,14 +465,15 @@ button {
     }
   }
 
-  /* Touch-target floor: every interactive element on a coarse pointer
-     gets ≥40px tap height. Doesn't affect mouse/desktop. */
+  /* Touch-target floor: bump small buttons + nav links to ≥44px
+     (Apple HIG) on coarse pointers. Default .hi-btn is already 44px
+     so it doesn't need to grow. */
   @media (pointer: coarse) {
-    .hi-btn,
     .hi-btn-sm,
     .fb-shell-nav a,
     .fb-shell-side-foot a {
-      min-height: 40px;
+      min-height: 44px;
+      min-width: 44px;
       display: inline-flex;
       align-items: center;
     }
@@ -487,14 +497,12 @@ button {
     gap: 10px;
     margin-left: auto;
   }
-  /* Drop the anchor links + version chip below 720px so the primary
-     CTA and Sign in stay above the fold without horizontal scroll. */
+  /* Drop the version chip below 720px to keep the nav minimal on phones. */
   @media (max-width: 720px) {
     .fb-nav {
       padding: 12px 16px;
       gap: 10px;
     }
-    .fb-nav-anchor,
     .fb-nav-chip {
       display: none;
     }
