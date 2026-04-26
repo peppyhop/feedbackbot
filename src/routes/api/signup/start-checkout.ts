@@ -33,7 +33,7 @@ import {
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
 import {
-  PLAN_PRODUCTS,
+  PRODUCT_ID_TO_SLUG,
   productIdForPlan,
   type PlanId,
 } from '#/lib/billing/plans'
@@ -68,16 +68,14 @@ async function handle(request: Request): Promise<Response> {
     }
     const userId = session.user.id
 
-    const productId = productIdForPlan(plan as PlanId)
+    const productId = productIdForPlan(plan as PlanId, env.DODO_PAYMENTS_ENV)
     if (!productId) {
       throw new ApiError(400, 'unknown plan', 'bad_plan')
     }
     // Dodo product slug (e.g. "feedbackbot-starter") — distinct from
     // our internal PlanId. The webhook reducer reads `metadata.slug`
     // and maps back to a PlanId via SLUG_TO_PLAN.
-    const productSlug = PLAN_PRODUCTS.find(
-      (p) => p.productId === productId,
-    )?.slug
+    const productSlug = PRODUCT_ID_TO_SLUG[productId]
 
     const db = makeDb(env.DB)
     const now = Date.now()

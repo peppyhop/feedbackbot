@@ -101,11 +101,17 @@ const UNOSEND_FROM =
 
 // ── Storage ──────────────────────────────────────────────────────
 
+// `adopt: true` on every resource: a previously-failed deploy can
+// leave Cloudflare-side resources orphaned (created but not in
+// alchemy state). Adopt-on-conflict makes subsequent runs
+// idempotent — they take ownership instead of erroring.
+
 const db = await D1Database('feedback-db', {
   migrationsDir: './src/db/migrations',
+  adopt: true,
 })
 
-const screenshots = await R2Bucket('feedback-screenshots')
+const screenshots = await R2Bucket('feedback-screenshots', { adopt: true })
 
 // Seed the blocklist KV at deploy time so freemail/disposable/strict
 // lookups work before any cron ever runs. Idempotent — same keys
@@ -120,24 +126,25 @@ const blocklistValues: Array<{ key: string; value: string }> = [
 
 const blocklistKv = await KVNamespace('blocklist-kv', {
   values: blocklistValues,
+  adopt: true,
 })
-const analyticsKv = await KVNamespace('analytics-kv')
-const cacheKv = await KVNamespace('cache-kv')
+const analyticsKv = await KVNamespace('analytics-kv', { adopt: true })
+const cacheKv = await KVNamespace('cache-kv', { adopt: true })
 
 // ── Queues ───────────────────────────────────────────────────────
 
-const fanoutDlq = await Queue('fanout-dlq')
+const fanoutDlq = await Queue('fanout-dlq', { adopt: true })
 
 const classifyQueue = await Queue<{
   ticket_id: string
   workspace_id: string
-}>('classify-queue')
+}>('classify-queue', { adopt: true })
 
 const fanoutQueue = await Queue<{
   ticket_id: string
   workspace_id: string
   attempt?: number
-}>('fanout-queue')
+}>('fanout-queue', { adopt: true })
 
 // ── Workers AI (Gemma 4) ─────────────────────────────────────────
 
@@ -178,6 +185,7 @@ const hostClaimLock = DurableObjectNamespace('claim-lock-host', {
 const dosWorker = await Worker('dos-worker', {
   entrypoint: 'src/workers/dos.ts',
   compatibility: 'node',
+  adopt: true,
   bindings: {
     RATE_LIMITER: hostRateLimiter,
     WORKSPACE_LIMITER: hostWorkspaceLimiter,
@@ -206,6 +214,7 @@ const claimLock = DurableObjectNamespace('claim-lock', {
 await Worker('classify-worker', {
   entrypoint: 'src/workers/classify.ts',
   compatibility: 'node',
+  adopt: true,
   bindings: {
     DB: db,
     AI: ai,
@@ -222,6 +231,7 @@ await Worker('classify-worker', {
 await Worker('cron-worker', {
   entrypoint: 'src/workers/cron.ts',
   compatibility: 'node',
+  adopt: true,
   bindings: {
     DB: db,
     ANALYTICS_KV: analyticsKv,
@@ -233,6 +243,7 @@ await Worker('cron-worker', {
 await Worker('fanout-worker', {
   entrypoint: 'src/workers/fanout.ts',
   compatibility: 'node',
+  adopt: true,
   bindings: {
     DB: db,
     SCREENSHOTS: screenshots,
@@ -257,10 +268,16 @@ await Worker('fanout-worker', {
 
 export const mainApp = await TanStackStart(APP_WORKER_ID, {
   compatibility: 'node',
-  // Custom domain only on production. Previews use the workers.dev
-  // URL surfaced in the deploy output (see console.log at the
-  // bottom of this file).
-  domains: IS_PRODUCTION ? [PROD_HOST] : undefined,
+  adopt: true,
+  // Custom domain only on production. `adopt: true` lets a new prod
+  // worker take over the apex binding from a previous stack (e.g.
+  // the legacy -dirghaprasad stack during cutover) instead of failing
+  // because the binding "already exists". Previews use the workers.dev
+  // URL surfaced in the deploy output (see console.log at the bottom
+  // of this file).
+  domains: IS_PRODUCTION
+    ? [{ domainName: PROD_HOST, adopt: true }]
+    : undefined,
   bindings: {
     // storage
     DB: db,

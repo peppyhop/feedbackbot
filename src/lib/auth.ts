@@ -17,7 +17,7 @@ import * as authSchema from '#/db/schema'
 import { member } from '#/db/schema'
 import { handleDodoPayload } from '#/lib/billing/webhook-reducer'
 import { sendMail } from '#/lib/mailer'
-import { PLAN_PRODUCTS } from '#/lib/billing/plans'
+import { planProductsFor } from '#/lib/billing/plans'
 
 const MAGIC_LINK_SUBJECT = 'Your FeedbackBot sign-in link'
 
@@ -55,7 +55,10 @@ function buildAuth() {
             // anon user is merged into the real one in onLinkAccount.
             authenticatedUsersOnly: false,
             successUrl: '/dashboard/billing/success',
-            products: PLAN_PRODUCTS,
+            // Resolved at request time inside the lazy Proxy so the
+            // right ID set (test vs live) is selected per current
+            // env binding, not at module load.
+            products: planProductsFor(env.DODO_PAYMENTS_ENV),
           }),
           portal(),
           webhooks({

@@ -9,7 +9,7 @@ import { env } from '#/env'
 import { makeDb } from '#/db/client'
 import { webhookEvents, workspaces } from '#/db/schema'
 import {
-  PLAN_PRODUCTS,
+  PRODUCT_ID_TO_SLUG,
   planFromSlug,
   type PlanId,
 } from '#/lib/billing/plans'
@@ -64,8 +64,10 @@ function subscriptionFields(data: Record<string, unknown>) {
     typeof metadata.slug === 'string' && metadata.slug
       ? metadata.slug
       : null
+  // PRODUCT_ID_TO_SLUG covers both test + live IDs so a webhook for
+  // either environment resolves its slug here.
   const fallbackSlug = productId
-    ? (PLAN_PRODUCTS.find((p) => p.productId === productId)?.slug ?? null)
+    ? (PRODUCT_ID_TO_SLUG[productId] ?? null)
     : null
   const slug = metadataSlug ?? fallbackSlug
   const plan: PlanId = planFromSlug(slug)
