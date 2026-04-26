@@ -55,6 +55,7 @@ function DashboardLayout() {
         <SidebarLink to={`/dashboard/${domain}/deliveries`}>
           Deliveries
         </SidebarLink>
+        <SidebarLink to={`/dashboard/${domain}/team`}>Team</SidebarLink>
         <SidebarLink to={`/dashboard/${domain}/billing`}>Billing</SidebarLink>
         <SidebarLink to={`/dashboard/${domain}/settings`}>Settings</SidebarLink>
 

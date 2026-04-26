@@ -105,7 +105,29 @@ function buildAuth() {
           })
         },
       }),
-      organization(),
+      organization({
+        // The link points at our UI route, which fetches invitation
+        // details and either prompts the recipient to sign in (magic
+        // link) or — if already signed in — POSTs to
+        // /api/auth/organization/accept-invitation to seal the deal.
+        sendInvitationEmail: async ({ id, email, organization, inviter }) => {
+          const baseUrl =
+            env.BETTER_AUTH_URL && env.BETTER_AUTH_URL.length > 0
+              ? env.BETTER_AUTH_URL
+              : 'https://usefeedbackbot.com'
+          const url = `${baseUrl}/accept-invitation/${id}`
+          const orgName = organization.name
+          const inviterName =
+            (inviter?.user?.name || inviter?.user?.email || 'Your teammate') +
+            ''
+          await sendMail({
+            to: email,
+            subject: `${inviterName} invited you to ${orgName} on FeedbackBot`,
+            text: `${inviterName} invited you to join the ${orgName} workspace on FeedbackBot.\n\nAccept the invitation: ${url}\n\nLink doesn't expire — but feel free to ignore if you weren't expecting it.`,
+            html: `<p><strong>${inviterName}</strong> invited you to join <strong>${orgName}</strong> on FeedbackBot.</p><p><a href="${url}">Accept the invitation</a></p><p style="color:#666;font-size:13px">Link doesn't expire — feel free to ignore if you weren't expecting it.</p>`,
+          })
+        },
+      }),
       anonymous({
         emailDomainName: 'feedbackbot.internal',
         // Fires when an anonymous user signs in with a real method

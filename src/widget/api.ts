@@ -62,3 +62,23 @@ async function uploadScreenshot(url: string, dataUrl: string): Promise<void> {
     // Screenshot is best-effort; failure doesn't kill the flow.
   })
 }
+
+export type WidgetConfig = {
+  plan: string | null
+  remove_branding: boolean
+}
+
+export async function fetchWidgetConfig(): Promise<WidgetConfig> {
+  // Defensive: never block widget render on this. If the request fails
+  // (offline, CORS, etc.), we keep the watermark visible — that's the
+  // safe default.
+  try {
+    const res = await fetch(`${API_BASE}/api/widget-config`, {
+      credentials: 'include',
+    })
+    if (!res.ok) return { plan: null, remove_branding: false }
+    return (await res.json()) as WidgetConfig
+  } catch {
+    return { plan: null, remove_branding: false }
+  }
+}

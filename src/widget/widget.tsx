@@ -1,7 +1,7 @@
 /** @jsxImportSource preact */
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 
-import { submitTicket } from './api'
+import { fetchWidgetConfig, submitTicket } from './api'
 
 type Step = 'compose' | 'sending' | 'sent'
 type Kind = 'auto' | 'bug' | 'idea' | 'ask'
@@ -21,6 +21,19 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
   const [email, setEmail] = useState('')
   const [withScreenshot, setWithScreenshot] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // remove_branding entitlement flag — fetched once on mount, defaults
+  // to false (watermark visible) so the link still renders if the
+  // config endpoint is unreachable.
+  const [removeBranding, setRemoveBranding] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    fetchWidgetConfig().then((cfg) => {
+      if (!cancelled) setRemoveBranding(cfg.remove_branding)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const close = () => {
     setOpen(false)
@@ -137,8 +150,21 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
                 </div>
 
                 <div class="foot">
-                  <span class="brand">▣ feedbackbot</span>
-                  <span class="spacer" />
+                  {removeBranding ? (
+                    <span class="spacer" />
+                  ) : (
+                    <>
+                      <a
+                        class="brand"
+                        href="https://usefeedbackbot.com/?ref=widget"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        ▣ Powered by FeedbackBot
+                      </a>
+                      <span class="spacer" />
+                    </>
+                  )}
                   <button
                     class="btn primary"
                     onClick={send}

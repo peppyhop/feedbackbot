@@ -151,6 +151,12 @@ export const WIDGET_CSS = `
 .foot .brand {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 10px; color: var(--fg-faint);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.foot .brand:hover {
+  color: var(--fg-mute);
+  text-decoration: underline;
 }
 .foot .spacer { flex: 1; }
 

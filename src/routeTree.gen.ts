@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,14 +17,17 @@ import { Route as OnboardWorkspaceIdRouteImport } from './routes/onboard.$worksp
 import { Route as DashboardDomainRouteImport } from './routes/dashboard.$domain'
 import { Route as BDomainRouteImport } from './routes/b.$domain'
 import { Route as ApiWorkspaceStateRouteImport } from './routes/api/workspace-state'
+import { Route as ApiWidgetConfigRouteImport } from './routes/api/widget-config'
 import { Route as ApiVoteRouteImport } from './routes/api/vote'
 import { Route as ApiVerifyDomainRouteImport } from './routes/api/verify-domain'
 import { Route as ApiTicketRouteImport } from './routes/api/ticket'
 import { Route as ApiScreenshotUploadRouteImport } from './routes/api/screenshot-upload'
 import { Route as ApiCommentRouteImport } from './routes/api/comment'
 import { Route as ApiAuthStateRouteImport } from './routes/api/auth-state'
+import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
 import { Route as DashboardDomainIndexRouteImport } from './routes/dashboard.$domain.index'
 import { Route as DashboardBillingSuccessRouteImport } from './routes/dashboard.billing.success'
+import { Route as DashboardDomainTeamRouteImport } from './routes/dashboard.$domain.team'
 import { Route as DashboardDomainSettingsRouteImport } from './routes/dashboard.$domain.settings'
 import { Route as DashboardDomainIntegrationsRouteImport } from './routes/dashboard.$domain.integrations'
 import { Route as DashboardDomainDeliveriesRouteImport } from './routes/dashboard.$domain.deliveries'
@@ -38,17 +42,26 @@ import { Route as ApiMeWorkspacesRouteImport } from './routes/api/me.workspaces'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdminTicketsRouteImport } from './routes/api/admin/tickets'
 import { Route as ApiAdminRedriveRouteImport } from './routes/api/admin/redrive'
+import { Route as ApiAdminMembersRouteImport } from './routes/api/admin/members'
 import { Route as ApiAdminIntegrationsRouteImport } from './routes/api/admin/integrations'
 import { Route as ApiAdminDeliveriesRouteImport } from './routes/api/admin/deliveries'
 import { Route as ApiAdminBillingSummaryRouteImport } from './routes/api/admin/billing-summary'
+import { Route as ApiAdminAuditLogRouteImport } from './routes/api/admin/audit-log'
 import { Route as DashboardDomainTicketsIdRouteImport } from './routes/dashboard.$domain.tickets.$id'
 import { Route as ApiIntegrationsSlackInstallRouteImport } from './routes/api/integrations/slack.install'
 import { Route as ApiIntegrationsSlackCallbackRouteImport } from './routes/api/integrations/slack.callback'
 import { Route as ApiAdminTicketsIdRouteImport } from './routes/api/admin/tickets.$id'
+import { Route as ApiAdminMembersMemberIdRouteImport } from './routes/api/admin/members.$memberId'
+import { Route as ApiAdminInvitationsInvitationIdRouteImport } from './routes/api/admin/invitations.$invitationId'
 import { Route as ApiAdminIntegrationsIdRouteImport } from './routes/api/admin/integrations.$id'
 import { Route as ApiAdminIntegrationsIdSlackChannelsRouteImport } from './routes/api/admin/integrations.$id.slack-channels'
 import { Route as ApiAdminIntegrationsIdRoutesRouteImport } from './routes/api/admin/integrations.$id.routes'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -84,6 +97,11 @@ const ApiWorkspaceStateRoute = ApiWorkspaceStateRouteImport.update({
   path: '/api/workspace-state',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWidgetConfigRoute = ApiWidgetConfigRouteImport.update({
+  id: '/api/widget-config',
+  path: '/api/widget-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiVoteRoute = ApiVoteRouteImport.update({
   id: '/api/vote',
   path: '/api/vote',
@@ -114,6 +132,11 @@ const ApiAuthStateRoute = ApiAuthStateRouteImport.update({
   path: '/api/auth-state',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
+  id: '/accept-invitation/$id',
+  path: '/accept-invitation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardDomainIndexRoute = DashboardDomainIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -123,6 +146,11 @@ const DashboardBillingSuccessRoute = DashboardBillingSuccessRouteImport.update({
   id: '/dashboard/billing/success',
   path: '/dashboard/billing/success',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardDomainTeamRoute = DashboardDomainTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => DashboardDomainRoute,
 } as any)
 const DashboardDomainSettingsRoute = DashboardDomainSettingsRouteImport.update({
   id: '/settings',
@@ -196,6 +224,11 @@ const ApiAdminRedriveRoute = ApiAdminRedriveRouteImport.update({
   path: '/api/admin/redrive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminMembersRoute = ApiAdminMembersRouteImport.update({
+  id: '/api/admin/members',
+  path: '/api/admin/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminIntegrationsRoute = ApiAdminIntegrationsRouteImport.update({
   id: '/api/admin/integrations',
   path: '/api/admin/integrations',
@@ -209,6 +242,11 @@ const ApiAdminDeliveriesRoute = ApiAdminDeliveriesRouteImport.update({
 const ApiAdminBillingSummaryRoute = ApiAdminBillingSummaryRouteImport.update({
   id: '/api/admin/billing-summary',
   path: '/api/admin/billing-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminAuditLogRoute = ApiAdminAuditLogRouteImport.update({
+  id: '/api/admin/audit-log',
+  path: '/api/admin/audit-log',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardDomainTicketsIdRoute =
@@ -234,6 +272,17 @@ const ApiAdminTicketsIdRoute = ApiAdminTicketsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAdminTicketsRoute,
 } as any)
+const ApiAdminMembersMemberIdRoute = ApiAdminMembersMemberIdRouteImport.update({
+  id: '/$memberId',
+  path: '/$memberId',
+  getParentRoute: () => ApiAdminMembersRoute,
+} as any)
+const ApiAdminInvitationsInvitationIdRoute =
+  ApiAdminInvitationsInvitationIdRouteImport.update({
+    id: '/api/admin/invitations/$invitationId',
+    path: '/api/admin/invitations/$invitationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminIntegrationsIdRoute = ApiAdminIntegrationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -256,19 +305,24 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
   '/api/comment': typeof ApiCommentRoute
   '/api/screenshot-upload': typeof ApiScreenshotUploadRoute
   '/api/ticket': typeof ApiTicketRoute
   '/api/verify-domain': typeof ApiVerifyDomainRoute
   '/api/vote': typeof ApiVoteRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
   '/api/workspace-state': typeof ApiWorkspaceStateRoute
   '/b/$domain': typeof BDomainRoute
   '/dashboard/$domain': typeof DashboardDomainRouteWithChildren
   '/onboard/$workspaceId': typeof OnboardWorkspaceIdRoute
+  '/api/admin/audit-log': typeof ApiAdminAuditLogRoute
   '/api/admin/billing-summary': typeof ApiAdminBillingSummaryRoute
   '/api/admin/deliveries': typeof ApiAdminDeliveriesRoute
   '/api/admin/integrations': typeof ApiAdminIntegrationsRouteWithChildren
+  '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -283,9 +337,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
   '/dashboard/$domain/integrations': typeof DashboardDomainIntegrationsRoute
   '/dashboard/$domain/settings': typeof DashboardDomainSettingsRoute
+  '/dashboard/$domain/team': typeof DashboardDomainTeamRoute
   '/dashboard/billing/success': typeof DashboardBillingSuccessRoute
   '/dashboard/$domain/': typeof DashboardDomainIndexRoute
   '/api/admin/integrations/$id': typeof ApiAdminIntegrationsIdRouteWithChildren
+  '/api/admin/invitations/$invitationId': typeof ApiAdminInvitationsInvitationIdRoute
+  '/api/admin/members/$memberId': typeof ApiAdminMembersMemberIdRoute
   '/api/admin/tickets/$id': typeof ApiAdminTicketsIdRoute
   '/api/integrations/slack/callback': typeof ApiIntegrationsSlackCallbackRoute
   '/api/integrations/slack/install': typeof ApiIntegrationsSlackInstallRoute
@@ -297,18 +354,23 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
   '/api/comment': typeof ApiCommentRoute
   '/api/screenshot-upload': typeof ApiScreenshotUploadRoute
   '/api/ticket': typeof ApiTicketRoute
   '/api/verify-domain': typeof ApiVerifyDomainRoute
   '/api/vote': typeof ApiVoteRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
   '/api/workspace-state': typeof ApiWorkspaceStateRoute
   '/b/$domain': typeof BDomainRoute
   '/onboard/$workspaceId': typeof OnboardWorkspaceIdRoute
+  '/api/admin/audit-log': typeof ApiAdminAuditLogRoute
   '/api/admin/billing-summary': typeof ApiAdminBillingSummaryRoute
   '/api/admin/deliveries': typeof ApiAdminDeliveriesRoute
   '/api/admin/integrations': typeof ApiAdminIntegrationsRouteWithChildren
+  '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -323,9 +385,12 @@ export interface FileRoutesByTo {
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
   '/dashboard/$domain/integrations': typeof DashboardDomainIntegrationsRoute
   '/dashboard/$domain/settings': typeof DashboardDomainSettingsRoute
+  '/dashboard/$domain/team': typeof DashboardDomainTeamRoute
   '/dashboard/billing/success': typeof DashboardBillingSuccessRoute
   '/dashboard/$domain': typeof DashboardDomainIndexRoute
   '/api/admin/integrations/$id': typeof ApiAdminIntegrationsIdRouteWithChildren
+  '/api/admin/invitations/$invitationId': typeof ApiAdminInvitationsInvitationIdRoute
+  '/api/admin/members/$memberId': typeof ApiAdminMembersMemberIdRoute
   '/api/admin/tickets/$id': typeof ApiAdminTicketsIdRoute
   '/api/integrations/slack/callback': typeof ApiIntegrationsSlackCallbackRoute
   '/api/integrations/slack/install': typeof ApiIntegrationsSlackInstallRoute
@@ -338,19 +403,24 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
   '/api/comment': typeof ApiCommentRoute
   '/api/screenshot-upload': typeof ApiScreenshotUploadRoute
   '/api/ticket': typeof ApiTicketRoute
   '/api/verify-domain': typeof ApiVerifyDomainRoute
   '/api/vote': typeof ApiVoteRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
   '/api/workspace-state': typeof ApiWorkspaceStateRoute
   '/b/$domain': typeof BDomainRoute
   '/dashboard/$domain': typeof DashboardDomainRouteWithChildren
   '/onboard/$workspaceId': typeof OnboardWorkspaceIdRoute
+  '/api/admin/audit-log': typeof ApiAdminAuditLogRoute
   '/api/admin/billing-summary': typeof ApiAdminBillingSummaryRoute
   '/api/admin/deliveries': typeof ApiAdminDeliveriesRoute
   '/api/admin/integrations': typeof ApiAdminIntegrationsRouteWithChildren
+  '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -365,9 +435,12 @@ export interface FileRoutesById {
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
   '/dashboard/$domain/integrations': typeof DashboardDomainIntegrationsRoute
   '/dashboard/$domain/settings': typeof DashboardDomainSettingsRoute
+  '/dashboard/$domain/team': typeof DashboardDomainTeamRoute
   '/dashboard/billing/success': typeof DashboardBillingSuccessRoute
   '/dashboard/$domain/': typeof DashboardDomainIndexRoute
   '/api/admin/integrations/$id': typeof ApiAdminIntegrationsIdRouteWithChildren
+  '/api/admin/invitations/$invitationId': typeof ApiAdminInvitationsInvitationIdRoute
+  '/api/admin/members/$memberId': typeof ApiAdminMembersMemberIdRoute
   '/api/admin/tickets/$id': typeof ApiAdminTicketsIdRoute
   '/api/integrations/slack/callback': typeof ApiIntegrationsSlackCallbackRoute
   '/api/integrations/slack/install': typeof ApiIntegrationsSlackInstallRoute
@@ -381,19 +454,24 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
+    | '/accept-invitation/$id'
     | '/api/auth-state'
     | '/api/comment'
     | '/api/screenshot-upload'
     | '/api/ticket'
     | '/api/verify-domain'
     | '/api/vote'
+    | '/api/widget-config'
     | '/api/workspace-state'
     | '/b/$domain'
     | '/dashboard/$domain'
     | '/onboard/$workspaceId'
+    | '/api/admin/audit-log'
     | '/api/admin/billing-summary'
     | '/api/admin/deliveries'
     | '/api/admin/integrations'
+    | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
@@ -408,9 +486,12 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/deliveries'
     | '/dashboard/$domain/integrations'
     | '/dashboard/$domain/settings'
+    | '/dashboard/$domain/team'
     | '/dashboard/billing/success'
     | '/dashboard/$domain/'
     | '/api/admin/integrations/$id'
+    | '/api/admin/invitations/$invitationId'
+    | '/api/admin/members/$memberId'
     | '/api/admin/tickets/$id'
     | '/api/integrations/slack/callback'
     | '/api/integrations/slack/install'
@@ -422,18 +503,23 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
+    | '/accept-invitation/$id'
     | '/api/auth-state'
     | '/api/comment'
     | '/api/screenshot-upload'
     | '/api/ticket'
     | '/api/verify-domain'
     | '/api/vote'
+    | '/api/widget-config'
     | '/api/workspace-state'
     | '/b/$domain'
     | '/onboard/$workspaceId'
+    | '/api/admin/audit-log'
     | '/api/admin/billing-summary'
     | '/api/admin/deliveries'
     | '/api/admin/integrations'
+    | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
@@ -448,9 +534,12 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/deliveries'
     | '/dashboard/$domain/integrations'
     | '/dashboard/$domain/settings'
+    | '/dashboard/$domain/team'
     | '/dashboard/billing/success'
     | '/dashboard/$domain'
     | '/api/admin/integrations/$id'
+    | '/api/admin/invitations/$invitationId'
+    | '/api/admin/members/$memberId'
     | '/api/admin/tickets/$id'
     | '/api/integrations/slack/callback'
     | '/api/integrations/slack/install'
@@ -462,19 +551,24 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
+    | '/accept-invitation/$id'
     | '/api/auth-state'
     | '/api/comment'
     | '/api/screenshot-upload'
     | '/api/ticket'
     | '/api/verify-domain'
     | '/api/vote'
+    | '/api/widget-config'
     | '/api/workspace-state'
     | '/b/$domain'
     | '/dashboard/$domain'
     | '/onboard/$workspaceId'
+    | '/api/admin/audit-log'
     | '/api/admin/billing-summary'
     | '/api/admin/deliveries'
     | '/api/admin/integrations'
+    | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
@@ -489,9 +583,12 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/deliveries'
     | '/dashboard/$domain/integrations'
     | '/dashboard/$domain/settings'
+    | '/dashboard/$domain/team'
     | '/dashboard/billing/success'
     | '/dashboard/$domain/'
     | '/api/admin/integrations/$id'
+    | '/api/admin/invitations/$invitationId'
+    | '/api/admin/members/$memberId'
     | '/api/admin/tickets/$id'
     | '/api/integrations/slack/callback'
     | '/api/integrations/slack/install'
@@ -504,19 +601,24 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   ApiAuthStateRoute: typeof ApiAuthStateRoute
   ApiCommentRoute: typeof ApiCommentRoute
   ApiScreenshotUploadRoute: typeof ApiScreenshotUploadRoute
   ApiTicketRoute: typeof ApiTicketRoute
   ApiVerifyDomainRoute: typeof ApiVerifyDomainRoute
   ApiVoteRoute: typeof ApiVoteRoute
+  ApiWidgetConfigRoute: typeof ApiWidgetConfigRoute
   ApiWorkspaceStateRoute: typeof ApiWorkspaceStateRoute
   BDomainRoute: typeof BDomainRoute
   DashboardDomainRoute: typeof DashboardDomainRouteWithChildren
   OnboardWorkspaceIdRoute: typeof OnboardWorkspaceIdRoute
+  ApiAdminAuditLogRoute: typeof ApiAdminAuditLogRoute
   ApiAdminBillingSummaryRoute: typeof ApiAdminBillingSummaryRoute
   ApiAdminDeliveriesRoute: typeof ApiAdminDeliveriesRoute
   ApiAdminIntegrationsRoute: typeof ApiAdminIntegrationsRouteWithChildren
+  ApiAdminMembersRoute: typeof ApiAdminMembersRouteWithChildren
   ApiAdminRedriveRoute: typeof ApiAdminRedriveRoute
   ApiAdminTicketsRoute: typeof ApiAdminTicketsRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -527,12 +629,20 @@ export interface RootRouteChildren {
   ApiSignupAbandonRoute: typeof ApiSignupAbandonRoute
   ApiSignupStartCheckoutRoute: typeof ApiSignupStartCheckoutRoute
   DashboardBillingSuccessRoute: typeof DashboardBillingSuccessRoute
+  ApiAdminInvitationsInvitationIdRoute: typeof ApiAdminInvitationsInvitationIdRoute
   ApiIntegrationsSlackCallbackRoute: typeof ApiIntegrationsSlackCallbackRoute
   ApiIntegrationsSlackInstallRoute: typeof ApiIntegrationsSlackInstallRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -582,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWorkspaceStateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/widget-config': {
+      id: '/api/widget-config'
+      path: '/api/widget-config'
+      fullPath: '/api/widget-config'
+      preLoaderRoute: typeof ApiWidgetConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/vote': {
       id: '/api/vote'
       path: '/api/vote'
@@ -624,6 +741,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthStateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accept-invitation/$id': {
+      id: '/accept-invitation/$id'
+      path: '/accept-invitation/$id'
+      fullPath: '/accept-invitation/$id'
+      preLoaderRoute: typeof AcceptInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/$domain/': {
       id: '/dashboard/$domain/'
       path: '/'
@@ -637,6 +761,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/billing/success'
       preLoaderRoute: typeof DashboardBillingSuccessRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/$domain/team': {
+      id: '/dashboard/$domain/team'
+      path: '/team'
+      fullPath: '/dashboard/$domain/team'
+      preLoaderRoute: typeof DashboardDomainTeamRouteImport
+      parentRoute: typeof DashboardDomainRoute
     }
     '/dashboard/$domain/settings': {
       id: '/dashboard/$domain/settings'
@@ -736,6 +867,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminRedriveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/members': {
+      id: '/api/admin/members'
+      path: '/api/admin/members'
+      fullPath: '/api/admin/members'
+      preLoaderRoute: typeof ApiAdminMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/integrations': {
       id: '/api/admin/integrations'
       path: '/api/admin/integrations'
@@ -755,6 +893,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/billing-summary'
       fullPath: '/api/admin/billing-summary'
       preLoaderRoute: typeof ApiAdminBillingSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/audit-log': {
+      id: '/api/admin/audit-log'
+      path: '/api/admin/audit-log'
+      fullPath: '/api/admin/audit-log'
+      preLoaderRoute: typeof ApiAdminAuditLogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/$domain/tickets/$id': {
@@ -784,6 +929,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/admin/tickets/$id'
       preLoaderRoute: typeof ApiAdminTicketsIdRouteImport
       parentRoute: typeof ApiAdminTicketsRoute
+    }
+    '/api/admin/members/$memberId': {
+      id: '/api/admin/members/$memberId'
+      path: '/$memberId'
+      fullPath: '/api/admin/members/$memberId'
+      preLoaderRoute: typeof ApiAdminMembersMemberIdRouteImport
+      parentRoute: typeof ApiAdminMembersRoute
+    }
+    '/api/admin/invitations/$invitationId': {
+      id: '/api/admin/invitations/$invitationId'
+      path: '/api/admin/invitations/$invitationId'
+      fullPath: '/api/admin/invitations/$invitationId'
+      preLoaderRoute: typeof ApiAdminInvitationsInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/admin/integrations/$id': {
       id: '/api/admin/integrations/$id'
@@ -815,6 +974,7 @@ interface DashboardDomainRouteChildren {
   DashboardDomainDeliveriesRoute: typeof DashboardDomainDeliveriesRoute
   DashboardDomainIntegrationsRoute: typeof DashboardDomainIntegrationsRoute
   DashboardDomainSettingsRoute: typeof DashboardDomainSettingsRoute
+  DashboardDomainTeamRoute: typeof DashboardDomainTeamRoute
   DashboardDomainIndexRoute: typeof DashboardDomainIndexRoute
   DashboardDomainTicketsIdRoute: typeof DashboardDomainTicketsIdRoute
 }
@@ -825,6 +985,7 @@ const DashboardDomainRouteChildren: DashboardDomainRouteChildren = {
   DashboardDomainDeliveriesRoute: DashboardDomainDeliveriesRoute,
   DashboardDomainIntegrationsRoute: DashboardDomainIntegrationsRoute,
   DashboardDomainSettingsRoute: DashboardDomainSettingsRoute,
+  DashboardDomainTeamRoute: DashboardDomainTeamRoute,
   DashboardDomainIndexRoute: DashboardDomainIndexRoute,
   DashboardDomainTicketsIdRoute: DashboardDomainTicketsIdRoute,
 }
@@ -861,6 +1022,18 @@ const ApiAdminIntegrationsRouteChildren: ApiAdminIntegrationsRouteChildren = {
 const ApiAdminIntegrationsRouteWithChildren =
   ApiAdminIntegrationsRoute._addFileChildren(ApiAdminIntegrationsRouteChildren)
 
+interface ApiAdminMembersRouteChildren {
+  ApiAdminMembersMemberIdRoute: typeof ApiAdminMembersMemberIdRoute
+}
+
+const ApiAdminMembersRouteChildren: ApiAdminMembersRouteChildren = {
+  ApiAdminMembersMemberIdRoute: ApiAdminMembersMemberIdRoute,
+}
+
+const ApiAdminMembersRouteWithChildren = ApiAdminMembersRoute._addFileChildren(
+  ApiAdminMembersRouteChildren,
+)
+
 interface ApiAdminTicketsRouteChildren {
   ApiAdminTicketsIdRoute: typeof ApiAdminTicketsIdRoute
 }
@@ -877,19 +1050,24 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   ApiAuthStateRoute: ApiAuthStateRoute,
   ApiCommentRoute: ApiCommentRoute,
   ApiScreenshotUploadRoute: ApiScreenshotUploadRoute,
   ApiTicketRoute: ApiTicketRoute,
   ApiVerifyDomainRoute: ApiVerifyDomainRoute,
   ApiVoteRoute: ApiVoteRoute,
+  ApiWidgetConfigRoute: ApiWidgetConfigRoute,
   ApiWorkspaceStateRoute: ApiWorkspaceStateRoute,
   BDomainRoute: BDomainRoute,
   DashboardDomainRoute: DashboardDomainRouteWithChildren,
   OnboardWorkspaceIdRoute: OnboardWorkspaceIdRoute,
+  ApiAdminAuditLogRoute: ApiAdminAuditLogRoute,
   ApiAdminBillingSummaryRoute: ApiAdminBillingSummaryRoute,
   ApiAdminDeliveriesRoute: ApiAdminDeliveriesRoute,
   ApiAdminIntegrationsRoute: ApiAdminIntegrationsRouteWithChildren,
+  ApiAdminMembersRoute: ApiAdminMembersRouteWithChildren,
   ApiAdminRedriveRoute: ApiAdminRedriveRoute,
   ApiAdminTicketsRoute: ApiAdminTicketsRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
@@ -900,6 +1078,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignupAbandonRoute: ApiSignupAbandonRoute,
   ApiSignupStartCheckoutRoute: ApiSignupStartCheckoutRoute,
   DashboardBillingSuccessRoute: DashboardBillingSuccessRoute,
+  ApiAdminInvitationsInvitationIdRoute: ApiAdminInvitationsInvitationIdRoute,
   ApiIntegrationsSlackCallbackRoute: ApiIntegrationsSlackCallbackRoute,
   ApiIntegrationsSlackInstallRoute: ApiIntegrationsSlackInstallRoute,
 }
