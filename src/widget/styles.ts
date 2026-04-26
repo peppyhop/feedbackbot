@@ -11,6 +11,7 @@ export const WIDGET_CSS = `
   position: fixed;
   right: 20px;
   bottom: 20px;
+  max-width: calc(100vw - 32px);
   z-index: 2147483647;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   color: #0a0a0a;
@@ -19,7 +20,7 @@ export const WIDGET_CSS = `
   --surface: #ffffff;
   --fg: #0a0a0a;
   --fg-mute: #3a362e;
-  --fg-faint: #7a7368;
+  --fg-faint: #6b6356;
   --border: #0a0a0a;
   --border-soft: #b8b0a0;
   --accent: #ffe24a;
@@ -32,7 +33,7 @@ export const WIDGET_CSS = `
   --surface: #141312;
   --fg: #f4f1ea;
   --fg-mute: #c4bdb0;
-  --fg-faint: #7a7368;
+  --fg-faint: #9d9387;
   --border: #f4f1ea;
   --border-soft: #3a362e;
   --danger: #ff6a4a;
@@ -47,6 +48,7 @@ export const WIDGET_CSS = `
 
 .panel {
   width: 360px;
+  max-width: 100%;
   background: var(--surface);
   border: 2px solid var(--border);
   box-shadow: 6px 6px 0 0 var(--border);

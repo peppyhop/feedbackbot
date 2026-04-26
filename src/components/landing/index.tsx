@@ -40,35 +40,30 @@ export function Landing() {
 
 function Nav() {
   return (
-    <nav
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        padding: '16px 32px',
-        background: 'var(--bg)',
-        borderBottom: '1.5px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-      }}
-    >
+    <nav className="fb-nav">
       <LogoMark size={32} />
       <span className="h-display" style={{ fontSize: 20 }}>
         FeedbackBot
       </span>
-      <Chip>v0</Chip>
-      <div style={{ flex: 1 }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Btn as="a" href="#how" variant="ghost" size="sm">
-          How it works
-        </Btn>
-        <Btn as="a" href="#pricing" variant="ghost" size="sm">
-          Pricing
-        </Btn>
-        <Btn as="a" href="#faq" variant="ghost" size="sm">
-          FAQ
-        </Btn>
+      <span className="fb-nav-chip">
+        <Chip>v0</Chip>
+      </span>
+      <div className="fb-nav-actions">
+        <span className="fb-nav-anchor">
+          <Btn as="a" href="#how" variant="ghost" size="sm">
+            How it works
+          </Btn>
+        </span>
+        <span className="fb-nav-anchor">
+          <Btn as="a" href="#pricing" variant="ghost" size="sm">
+            Pricing
+          </Btn>
+        </span>
+        <span className="fb-nav-anchor">
+          <Btn as="a" href="#faq" variant="ghost" size="sm">
+            FAQ
+          </Btn>
+        </span>
         <ThemeToggle />
         <Btn as="a" href="/login" variant="ghost" size="sm">
           Sign in
@@ -172,7 +167,7 @@ function Hero() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
             gap: 40,
             marginTop: 48,
             alignItems: 'start',
@@ -400,7 +395,7 @@ function HowItWorks() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
             gap: 56,
             alignItems: 'start',
           }}
@@ -593,7 +588,7 @@ function FanOutPipeline() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
             gap: 56,
           }}
         >
@@ -712,7 +707,7 @@ function Claim() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
             gap: 32,
           }}
         >
@@ -813,7 +808,7 @@ function Features() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
             gap: 20,
           }}
         >
@@ -950,7 +945,7 @@ function Pricing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
             gap: 20,
           }}
         >
