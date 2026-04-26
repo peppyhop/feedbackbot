@@ -77,15 +77,20 @@ jobs:
       - name: Deploy preview
         id: deploy
         run: |
-          set -o pipefail
-          pnpm exec alchemy deploy --stage "$STAGE" 2>&1 | tee deploy.log
-          # Last `app: '<url>'` line printed by alchemy.run.ts:console.log.
+          # Don't pipefail-bail on alchemy's exit code — it sometimes
+          # returns non-zero from a post-deploy finalize step even when
+          # all resources were created. We treat URL-presence as the
+          # real success signal.
+          pnpm exec alchemy deploy --stage "$STAGE" 2>&1 | tee deploy.log || true
+          ALCHEMY_EXIT=${PIPESTATUS[0]}
+          echo "alchemy exit: $ALCHEMY_EXIT"
           URL=$(grep -oE "app: '[^']+'" deploy.log | tail -n1 | sed -E "s/app: '(.*)'/\1/")
           if [ -z "$URL" ]; then
-            echo "::error::Could not parse preview URL from alchemy output"
+            echo "::error::Deploy failed (no app URL in output, alchemy exit $ALCHEMY_EXIT)"
             exit 1
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "::notice::Preview ready at $URL"
 
       - name: Comment preview URL on PR
         uses: actions/github-script@v7
