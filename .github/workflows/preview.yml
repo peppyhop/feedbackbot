@@ -59,21 +59,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Verify CF token reaches CI intact
-        run: |
-          echo "TOKEN length: ${#CLOUDFLARE_API_TOKEN}"
-          echo "TOKEN prefix: ${CLOUDFLARE_API_TOKEN:0:5}..."
-          echo "ACCT ID length: ${#CLOUDFLARE_ACCOUNT_ID}"
-          echo "ACCT ID first/last char: ${CLOUDFLARE_ACCOUNT_ID:0:1}...${CLOUDFLARE_ACCOUNT_ID: -1}"
-          echo "--- token validity ---"
-          curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            | python3 -c "import json,sys;d=json.load(sys.stdin);print('valid=',d.get('success'),'status=',d['result'].get('status'))"
-          echo "--- target endpoint ---"
-          curl -s -o /dev/null -w "settings: HTTP %{http_code}\n" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/alchemy-state-service/settings"
-
       - name: Deploy preview
         id: deploy
         run: |
