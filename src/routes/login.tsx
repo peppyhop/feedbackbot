@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useSearch } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 
 import { Btn, LogoMark, Slab } from '#/components/ui/brut'
+import { authClient } from '#/lib/auth-client'
 import { seoMeta } from '#/lib/seo'
 import { PLAN_LABEL, type PlanId } from '#/lib/billing/plans'
 import { loadLoginState } from '#/server/login-state'
@@ -329,9 +330,16 @@ function LoginPage() {
             )}
             {googleEnabled && (
               <Btn
-                as="a"
                 variant="default"
-                href="/api/auth/sign-in/social/google?callbackURL=/"
+                onClick={() => {
+                  // Better Auth's social sign-in endpoint is POST-only;
+                  // the SDK wraps the redirect dance for us. callbackURL
+                  // is where we land after the proxy hop completes.
+                  authClient.signIn.social({
+                    provider: 'google',
+                    callbackURL: '/',
+                  })
+                }}
               >
                 Continue with Google
               </Btn>
