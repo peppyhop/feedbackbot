@@ -166,9 +166,17 @@ body {
     background: var(--surface);
     border: 2px solid var(--border);
     position: relative;
+    transition: transform 0.12s, box-shadow 0.12s;
   }
   .hi-card-raised {
     box-shadow: var(--shadow-brut);
+  }
+  /* Same lift-language as .hi-btn:hover so cards feel like part of
+     the same physical system. Only the raised variant lifts — flat
+     cards are static so they don't distract from text content. */
+  .hi-card-raised:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 0 var(--border);
   }
 
   /* brutalist button */
@@ -523,6 +531,62 @@ body {
   @media (max-width: 720px) {
     .hi-section-pad-32 {
       padding: 64px 20px !important;
+    }
+  }
+
+  /* ── micro-animations ─────────────────────────────────────────
+     Brutalist designs read as professional when motion is snappy
+     and intentional, not soft. All durations < 320ms; transforms
+     are small (≤12px) so layout doesn't visibly reflow. */
+
+  /* Reveal-on-scroll: applied via IntersectionObserver in JS.
+     Sections start invisible + offset; the .is-visible class flips
+     them into final position. */
+  .fb-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.32s ease-out, transform 0.32s ease-out;
+    will-change: opacity, transform;
+  }
+  .fb-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Profile dropdown: scale + fade in from the corner closest to the
+     trigger button, mirroring native menu affordances. */
+  @keyframes fb-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .fb-menu-in {
+    animation: fb-menu-in 0.12s ease-out both;
+    transform-origin: top right;
+  }
+
+  /* Honor user system preference. WCAG 2.1 SC 2.3.3 — disable any
+     non-essential animation that crosses the threshold. We zero
+     duration rather than removing the rules so layout stays stable
+     (final-state values still apply). */
+  @media (prefers-reduced-motion: reduce) {
+    .fb-reveal,
+    .fb-reveal.is-visible,
+    .fb-menu-in,
+    .hi-card-raised,
+    .hi-btn,
+    .hi-btn-sm {
+      transition: none !important;
+      animation: none !important;
+    }
+    .fb-reveal {
+      opacity: 1;
+      transform: none;
     }
   }
 }
