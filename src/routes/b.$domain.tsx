@@ -155,7 +155,7 @@ function BoardPage() {
             margin: '0 auto',
             display: 'grid',
             gap: 24,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
           }}
         >
           {STATUS_LANES.map((lane) => {

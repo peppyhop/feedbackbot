@@ -41,15 +41,16 @@ html[data-theme="light"] {
   --surface-alt: #ece7db;
   --fg: #0a0a0a;
   --fg-mute: #3a362e;
-  --fg-faint: #7a7368;
+  /* WCAG: #6b6356 on #f4f1ea ≈ 5.5:1 (AA normal). Was #7a7368 (~4.2:1). */
+  --fg-faint: #6b6356;
   --border: #0a0a0a;
   --border-soft: #b8b0a0;
   --accent: #ffe24a;
   --accent-ink: #0a0a0a;
-  --ok: #1f6b3a;
-  --danger: #c0391c;
-  --info: #2558c8;
-  --spam: #8a8178;
+  --ok: #156c33;
+  --danger: #b8331a;
+  --info: #1d4ec0;
+  --spam: #756d63;
   color-scheme: light;
 }
 
@@ -59,15 +60,16 @@ html[data-theme="dark"] {
   --surface-alt: #1b1a18;
   --fg: #f4f1ea;
   --fg-mute: #c4bdb0;
-  --fg-faint: #7a7368;
+  /* WCAG: #9d9387 on #0b0b0a ≈ 6.4:1 (AAA). Was #7a7368 (~2.0:1, fail). */
+  --fg-faint: #9d9387;
   --border: #f4f1ea;
-  --border-soft: #3a362e;
+  --border-soft: #4a443c;
   --accent: #ffe24a;
   --accent-ink: #0a0a0a;
-  --ok: #3fdc80;
-  --danger: #ff6a4a;
-  --info: #7aa8ff;
-  --spam: #6a655a;
+  --ok: #4be089;
+  --danger: #ff7e62;
+  --info: #8fb6ff;
+  --spam: #948a7e;
   color-scheme: dark;
 }
 
@@ -165,8 +167,15 @@ button {
   .hi-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 12px 20px;
+    /* Locks default + sm + icon-only buttons to a consistent height
+       so a row of mixed-content buttons (e.g. ThemeToggle + Sign in)
+       lines up regardless of whether each contains text, icon, or
+       both. Touch override below in @media (pointer: coarse). */
+    min-height: 44px;
+    min-width: 44px;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 15px;
@@ -206,8 +215,10 @@ button {
     transform: translate(-2px, -2px);
   }
   .hi-btn-sm {
-    padding: 7px 14px;
+    padding: 6px 12px;
     font-size: 13px;
+    min-height: 32px;
+    min-width: 32px;
     box-shadow: 3px 3px 0 0 var(--border);
   }
   .hi-btn-sm:hover {
@@ -375,5 +386,135 @@ button {
     );
     background-size: 18px 18px;
     background-position: 0 0;
+  }
+
+  /* ── responsive dashboard shell ─────────────────────────────────
+     Desktop: 240px sidebar + fluid main.
+     Mobile (< 720px): sidebar collapses to a horizontal strip on top,
+     main flows below. */
+  .fb-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
+  .fb-shell-side {
+    border-right: 1.5px solid var(--border);
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--surface);
+  }
+  .fb-shell-main {
+    padding: 32px;
+    overflow-y: auto;
+  }
+  .fb-shell-side-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .fb-shell-nav {
+    display: contents;
+  }
+  .fb-shell-side-foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 720px) {
+    .fb-shell {
+      grid-template-columns: 1fr;
+    }
+    .fb-shell-side {
+      border-right: 0;
+      border-bottom: 1.5px solid var(--border);
+      padding: 12px 16px;
+      gap: 6px;
+    }
+    .fb-shell-side-head {
+      margin-bottom: 8px;
+    }
+    /* nav links scroll horizontally on mobile so they don't push
+       content way down */
+    .fb-shell-nav {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin: 0 -16px;
+      padding: 4px 16px;
+    }
+    .fb-shell-nav::-webkit-scrollbar { display: none; }
+    .fb-shell-nav > a {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 8px 12px !important;
+      font-size: 13px !important;
+    }
+    .fb-shell-side-foot {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .fb-shell-main {
+      padding: 20px 16px;
+    }
+  }
+
+  /* Touch-target floor: bump small buttons + nav links to ≥44px
+     (Apple HIG) on coarse pointers. Default .hi-btn is already 44px
+     so it doesn't need to grow. */
+  @media (pointer: coarse) {
+    .hi-btn-sm,
+    .fb-shell-nav a,
+    .fb-shell-side-foot a {
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+
+  /* ── responsive landing nav ───────────────────────────────────── */
+  .fb-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 16px 32px;
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .fb-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+  /* Drop the version chip below 720px to keep the nav minimal on phones. */
+  @media (max-width: 720px) {
+    .fb-nav {
+      padding: 12px 16px;
+      gap: 10px;
+    }
+    .fb-nav-chip {
+      display: none;
+    }
+    .fb-nav-actions {
+      gap: 6px;
+    }
+  }
+
+  /* Generic: keep a section's content width under control on phones */
+  @media (max-width: 720px) {
+    .hi-section-pad-32 {
+      padding: 64px 20px !important;
+    }
   }
 }

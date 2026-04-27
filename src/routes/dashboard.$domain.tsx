@@ -18,20 +18,11 @@ export const Route = createFileRoute('/dashboard/$domain')({
 function DashboardLayout() {
   const { domain } = Route.useParams() as { domain: string }
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '240px 1fr' }}>
-      <aside
-        style={{
-          borderRight: '1.5px solid var(--border)',
-          padding: '20px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          background: 'var(--surface)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+    <div className="fb-shell">
+      <aside className="fb-shell-side">
+        <div className="fb-shell-side-head">
           <LogoMark size={26} />
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               className="h-mono"
               style={{
@@ -43,42 +34,55 @@ function DashboardLayout() {
             >
               workspace
             </div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{domain}</div>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {domain}
+            </div>
           </div>
         </div>
 
-        <SidebarLink to={`/dashboard/${domain}`}>Tickets</SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/claim`}>Claim</SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/integrations`}>
-          Integrations
-        </SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/deliveries`}>
-          Deliveries
-        </SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/team`}>Team</SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/billing`}>Billing</SidebarLink>
-        <SidebarLink to={`/dashboard/${domain}/settings`}>Settings</SidebarLink>
+        <nav className="fb-shell-nav" aria-label="Dashboard sections">
+          <SidebarLink to={`/dashboard/${domain}`}>Tickets</SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/claim`}>Claim</SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/integrations`}>
+            Integrations
+          </SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/deliveries`}>
+            Deliveries
+          </SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/team`}>Team</SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/billing`}>Billing</SidebarLink>
+          <SidebarLink to={`/dashboard/${domain}/settings`}>
+            Settings
+          </SidebarLink>
+        </nav>
 
-        <div style={{ flex: 1 }} />
-
-        <Link
-          to="/b/$domain"
-          params={{ domain }}
-          className="h-mono"
-          style={{
-            fontSize: 11,
-            color: 'var(--fg-faint)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          view public board →
-        </Link>
-        <div style={{ height: 8 }} />
-        <ThemeToggle />
+        <div className="fb-shell-side-foot">
+          <Link
+            to="/b/$domain"
+            params={{ domain }}
+            className="h-mono"
+            style={{
+              fontSize: 11,
+              color: 'var(--fg-faint)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            view public board →
+          </Link>
+          <ThemeToggle />
+        </div>
       </aside>
 
-      <main style={{ padding: 32, overflowY: 'auto' }}>
+      <main className="fb-shell-main">
         <Outlet />
       </main>
     </div>

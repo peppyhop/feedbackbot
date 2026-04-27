@@ -97,12 +97,29 @@ function buildAuth() {
     plugins: [
       magicLink({
         sendMagicLink: async ({ email, url }) => {
-          await sendMail({
-            to: email,
-            subject: MAGIC_LINK_SUBJECT,
-            text: `Sign in to FeedbackBot: ${url}\n\nLink expires in 5 minutes.`,
-            html: `<p>Sign in to FeedbackBot:</p><p><a href="${url}">${url}</a></p><p>Link expires in 5 minutes.</p>`,
-          })
+          try {
+            await sendMail({
+              to: email,
+              subject: MAGIC_LINK_SUBJECT,
+              text: `Sign in to FeedbackBot: ${url}\n\nLink expires in 5 minutes.`,
+              html: `<p>Sign in to FeedbackBot:</p><p><a href="${url}">${url}</a></p><p>Link expires in 5 minutes.</p>`,
+            })
+          } catch (err) {
+            // On non-prod stages (where BETTER_AUTH_URL is empty),
+            // dump the URL to wrangler tail so a developer can grab
+            // it when the email provider is misconfigured / down.
+            // Production stays silent — the URL is bearer-token-grade
+            // sensitive and we don't want it routinely in prod logs.
+            const isProd =
+              env.BETTER_AUTH_URL === 'https://usefeedbackbot.com'
+            if (!isProd) {
+              const keyPrefix = (env.UNOSEND_API_KEY ?? '').slice(0, 12)
+              console.warn(
+                `[magic-link] mail send failed on non-prod stage; URL=${url} email=${email} keyPrefix=${keyPrefix} from=${env.UNOSEND_FROM ?? 'default'}`,
+              )
+            }
+            throw err
+          }
         },
       }),
       organization({
