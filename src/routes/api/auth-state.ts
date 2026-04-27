@@ -19,9 +19,18 @@ import { withRequestMetrics } from '#/lib/analytics'
 async function handle(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
+    // Surface key fragments so a developer can match the deployed
+    // value against what's shown in the Google Cloud / Unosend
+    // dashboards without exposing full secrets. Lengths catch
+    // trailing-newline / wrapping-quote bugs that don't show in
+    // length-equals checks.
+    const googleClientId = env.GOOGLE_CLIENT_ID ?? ''
     return json(
       {
         google_enabled: !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET,
+        google_client_id_head: googleClientId.slice(0, 12),
+        google_client_id_tail: googleClientId.slice(-30),
+        google_client_id_len: googleClientId.length,
         magic_link_enabled: !!env.UNOSEND_API_KEY,
       },
       { headers: cors },
