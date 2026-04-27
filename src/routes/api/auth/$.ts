@@ -13,18 +13,17 @@ async function handle(request: Request): Promise<Response> {
     // Better Auth catches its own plugin throws (e.g. a sendMagicLink
     // failure) and returns an empty-body 500. The login form reads
     // res.text() to populate the error toast — empty body falls back
-    // to "HTTP 500", which is useless. Rewrite the body when this
-    // pattern shows up so the user sees something actionable.
-    if (
-      res.status >= 500 &&
-      res.headers.get('content-length') === '0' &&
-      path.startsWith('/api/auth/')
-    ) {
-      console.warn('rewriting empty 500 body for', path)
-      return new Response(friendly(), {
-        status: res.status,
-        headers: { 'content-type': 'text/plain; charset=utf-8' },
-      })
+    // to "HTTP 500", which is useless. Rewrite the body when the
+    // upstream gave us a 5xx with no actionable text.
+    if (res.status >= 500 && path.startsWith('/api/auth/')) {
+      const body = await res.clone().text()
+      if (body.length === 0) {
+        console.warn('rewriting empty 500 body for', path)
+        return new Response(friendly(), {
+          status: res.status,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+        })
+      }
     }
     return res
   } catch (err) {
