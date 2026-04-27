@@ -113,8 +113,9 @@ function buildAuth() {
             const isProd =
               env.BETTER_AUTH_URL === 'https://usefeedbackbot.com'
             if (!isProd) {
+              const keyPrefix = (env.UNOSEND_API_KEY ?? '').slice(0, 12)
               console.warn(
-                `[magic-link] mail send failed on non-prod stage; URL=${url} email=${email}`,
+                `[magic-link] mail send failed on non-prod stage; URL=${url} email=${email} keyPrefix=${keyPrefix} from=${env.UNOSEND_FROM ?? 'default'}`,
               )
             }
             throw err
