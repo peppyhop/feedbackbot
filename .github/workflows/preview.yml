@@ -43,10 +43,14 @@ jobs:
       # /signup flow's start-checkout endpoint returns 503 if hit.
       # Magic-link auth + the rest of the app still work for review.
       #
-      # NOTE: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are intentionally
-      # not passed — alchemy.run.ts zeroes them on non-production stages
-      # so the social-google provider stays inactive (its redirect URI
-      # is pinned at the prod apex).
+      # Google OAuth credentials are forwarded to previews too. The
+      # OAuth client at Google only registers the production redirect
+      # URI, but the better-auth oAuthProxy plugin routes preview
+      # callbacks through prod (see src/lib/auth.ts). All stages need
+      # the same socialProviders config registered so Better Auth
+      # knows the provider exists.
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v4
 

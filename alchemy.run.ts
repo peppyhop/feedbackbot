@@ -84,17 +84,13 @@ function optionalSecret(name: string) {
   return alchemy.secret(process.env[name] ?? '', name)
 }
 
-// Google OAuth: only on production. The OAuth client's redirect URI
-// is fixed at https://usefeedbackbot.com/api/auth/callback/google,
-// so a preview signing in via Google would 404 on callback. Zero
-// out the secrets on previews and the UI hides the button (see
-// /api/auth-state response).
-const GOOGLE_CLIENT_ID = IS_PRODUCTION
-  ? optionalSecret('GOOGLE_CLIENT_ID')
-  : alchemy.secret('', 'GOOGLE_CLIENT_ID')
-const GOOGLE_CLIENT_SECRET = IS_PRODUCTION
-  ? optionalSecret('GOOGLE_CLIENT_SECRET')
-  : alchemy.secret('', 'GOOGLE_CLIENT_SECRET')
+// Google OAuth: passed through to every stage. The Google Cloud
+// OAuth client only registers the production redirect URI; preview
+// deploys use the better-auth oAuthProxy plugin to bounce through
+// production before redirecting back to the preview origin. See
+// src/lib/auth.ts for the proxy setup.
+const GOOGLE_CLIENT_ID = optionalSecret('GOOGLE_CLIENT_ID')
+const GOOGLE_CLIENT_SECRET = optionalSecret('GOOGLE_CLIENT_SECRET')
 const SLACK_CLIENT_ID = optionalSecret('SLACK_CLIENT_ID')
 const SLACK_CLIENT_SECRET = optionalSecret('SLACK_CLIENT_SECRET')
 const SENTRY_DSN = optionalSecret('SENTRY_DSN')

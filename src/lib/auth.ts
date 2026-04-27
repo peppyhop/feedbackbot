@@ -1,6 +1,11 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { anonymous, magicLink, organization } from 'better-auth/plugins'
+import {
+  anonymous,
+  magicLink,
+  oAuthProxy,
+  organization,
+} from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { eq } from 'drizzle-orm'
 import DodoPayments from 'dodopayments'
@@ -87,6 +92,15 @@ function buildAuth() {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
 
+    // Allow OAuth flows initiated from preview deploys to redirect
+    // back to their own origin after the proxy hop through prod.
+    // Wildcard pattern matches the per-PR hostnames; the apex is
+    // the production callback target.
+    trustedOrigins: [
+      'https://usefeedbackbot.com',
+      'https://*.preview.usefeedbackbot.com',
+    ],
+
     socialProviders: {
       google: {
         clientId: env.GOOGLE_CLIENT_ID ?? '',
@@ -160,6 +174,15 @@ function buildAuth() {
         },
       }),
       ...(dodoPlugin ? [dodoPlugin] : []),
+      // Routes preview-deploy OAuth flows through prod so we only
+      // need a single redirect URI registered with each provider.
+      // Production exchanges the code, signs an encrypted profile
+      // payload, then 302s back to the original preview origin
+      // which decrypts it (BETTER_AUTH_SECRET shared across stages)
+      // and creates the local session. No-op on production itself.
+      oAuthProxy({
+        productionURL: 'https://usefeedbackbot.com',
+      }),
       tanstackStartCookies(),
     ],
   })
