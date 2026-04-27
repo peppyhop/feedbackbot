@@ -25,19 +25,73 @@ const INSTALL_SNIPPET =
 
 const indexRoute = getRouteApi('/')
 
+// Adds .is-visible to the element when it enters the viewport — pairs
+// with .fb-reveal in styles.css for the snap-up entrance animation.
+// Cheap (one observer per element, disconnects after first hit) and
+// idempotent on SSR (the element renders at final state if JS never
+// runs because the .is-visible class is the resolved state).
+function useRevealOnScroll<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      el.classList.add('is-visible')
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            el.classList.add('is-visible')
+            io.disconnect()
+          }
+        }
+      },
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return ref
+}
+
+function Reveal({ children }: { children: React.ReactNode }) {
+  const ref = useRevealOnScroll<HTMLDivElement>()
+  return (
+    <div ref={ref} className="fb-reveal">
+      {children}
+    </div>
+  )
+}
+
 export function Landing() {
   return (
     <div>
       <Nav />
       <Hero />
       <Marquee />
-      <HowItWorks />
-      <FanOutPipeline />
-      <Claim />
-      <Features />
-      <Pricing />
-      <FAQ />
-      <CTA />
+      <Reveal>
+        <HowItWorks />
+      </Reveal>
+      <Reveal>
+        <FanOutPipeline />
+      </Reveal>
+      <Reveal>
+        <Claim />
+      </Reveal>
+      <Reveal>
+        <Features />
+      </Reveal>
+      <Reveal>
+        <Pricing />
+      </Reveal>
+      <Reveal>
+        <FAQ />
+      </Reveal>
+      <Reveal>
+        <CTA />
+      </Reveal>
       <Footer />
     </div>
   )
@@ -148,7 +202,7 @@ function ProfileMenu({
       {open && (
         <div
           role="menu"
-          className="hi-card"
+          className="hi-card fb-menu-in"
           style={{
             position: 'absolute',
             top: 'calc(100% + 8px)',
