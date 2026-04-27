@@ -17,6 +17,7 @@ import {
 
 import { Btn, Chip, LogoMark, Slab, Tag } from '#/components/ui/brut'
 import { ThemeToggle } from '#/components/theme-toggle'
+import { authClient } from '#/lib/auth-client'
 import type { LoginState } from '#/server/login-state'
 
 const INSTALL_SNIPPET =
@@ -107,14 +108,17 @@ function ProfileMenu({
 
   async function logout() {
     setOpen(false)
+    // Use the SDK rather than raw fetch — Better Auth's sign-out
+    // expects the protocol the client wraps (proper headers + CSRF
+    // when enabled). A plain POST with no body left the cookie
+    // intact in the browser even though the server cleared it.
     try {
-      await fetch('/api/auth/sign-out', {
-        method: 'POST',
-        credentials: 'include',
-      })
+      await authClient.signOut()
     } catch {
       // best-effort; reload either way so stale UI doesn't linger
     }
+    // Hard reload to force the / loader to re-run with the cleared
+    // cookies and flip the nav back to "Sign in".
     window.location.href = '/'
   }
 
