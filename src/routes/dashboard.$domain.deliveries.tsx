@@ -101,19 +101,19 @@ function DeliveriesPage() {
           <button
             key={f.v || 'all'}
             onClick={() => setStatus(f.v)}
-            className="hi-focus"
+            className="hi-btn hi-btn-sm hi-focus"
             style={{
-              padding: '6px 10px',
-              border: '1.5px solid var(--border)',
               background:
                 status === f.v ? 'var(--accent)' : 'var(--surface)',
               color:
                 status === f.v ? 'var(--accent-ink)' : 'var(--fg)',
+              borderColor:
+                status === f.v ? 'var(--accent-ink)' : 'var(--border)',
               fontFamily: 'var(--font-mono)',
               fontSize: 11,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              cursor: 'pointer',
+              boxShadow: status === f.v ? '3px 3px 0 0 var(--accent-ink)' : '3px 3px 0 0 var(--border)',
             }}
           >
             {f.label}
@@ -244,6 +244,11 @@ function DeliveryCard({
               fontSize: 13,
               color: 'var(--fg-mute)',
               lineHeight: 1.4,
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              wordBreak: 'break-word',
             }}
           >
             {delivery.ticket.message ?? '(ticket not found)'}

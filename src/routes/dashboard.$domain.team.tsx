@@ -350,17 +350,33 @@ function MemberRow({
       style={{
         padding: '10px 14px',
         display: 'grid',
-        gridTemplateColumns: '1fr auto auto',
+        gridTemplateColumns: 'minmax(0, 1fr) auto auto',
         gap: 12,
         alignItems: 'center',
       }}
     >
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {member.email ?? member.user_id}
         </div>
         {member.name && (
-          <div style={{ fontSize: 12, color: 'var(--fg-mute)' }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--fg-mute)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {member.name}
           </div>
         )}
@@ -403,14 +419,24 @@ function InviteRow({
       style={{
         padding: '10px 14px',
         display: 'grid',
-        gridTemplateColumns: '1fr auto auto',
+        gridTemplateColumns: 'minmax(0, 1fr) auto auto',
         gap: 12,
         alignItems: 'center',
         borderStyle: 'dashed',
       }}
     >
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>{inv.email}</div>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {inv.email}
+        </div>
         <div
           className="h-mono"
           style={{ fontSize: 11, color: 'var(--fg-faint)', marginTop: 2 }}

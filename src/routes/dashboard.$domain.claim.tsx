@@ -188,7 +188,7 @@ function RecordRow({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '80px 1fr auto',
+        gridTemplateColumns: 'minmax(60px, max-content) minmax(0, 1fr) auto',
         alignItems: 'center',
         gap: 10,
         border: '1.5px solid var(--border)',

@@ -206,8 +206,16 @@ function IntegrationCard({
         <span style={{ color: 'var(--fg-mute)' }}>
           {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </span>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {integration.name}
           </div>
           <div
@@ -389,7 +397,7 @@ function SlackRoutesEditor({
             key={kind}
             style={{
               display: 'grid',
-              gridTemplateColumns: '80px 1fr',
+              gridTemplateColumns: 'minmax(60px, max-content) minmax(0, 1fr)',
               alignItems: 'center',
               gap: 10,
             }}

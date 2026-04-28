@@ -79,6 +79,51 @@ function Tickets() {
         </div>
       )}
 
+      {!isLoading && !error && data && data.tickets.length === 0 && (
+        <div
+          className="hi-card"
+          style={{ padding: 28, textAlign: 'center' }}
+        >
+          <div
+            className="h-mono"
+            style={{
+              fontSize: 11,
+              color: 'var(--fg-faint)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              marginBottom: 8,
+            }}
+          >
+            No tickets yet
+          </div>
+          <div
+            className="h-display"
+            style={{ fontSize: 28, marginBottom: 10, letterSpacing: '-0.02em' }}
+          >
+            Quiet inbox.
+          </div>
+          <p
+            style={{
+              fontSize: 14,
+              color: 'var(--fg-mute)',
+              maxWidth: 420,
+              margin: '0 auto 16px',
+              lineHeight: 1.5,
+            }}
+          >
+            Once visitors open the widget on{' '}
+            <span className="h-mono" style={{ fontSize: 13 }}>
+              {domain}
+            </span>{' '}
+            and submit feedback, it'll show up here — pre-sorted into bugs,
+            ideas, questions, and spam.
+          </p>
+          <Btn as="a" href="/#get-started" variant="ghost" size="sm">
+            Install snippet →
+          </Btn>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {data?.tickets.map((t) => {
           const kindMap: Partial<

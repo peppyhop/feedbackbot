@@ -178,7 +178,7 @@ function TicketDetail() {
             <dl
               style={{
                 display: 'grid',
-                gridTemplateColumns: '120px 1fr',
+                gridTemplateColumns: 'minmax(80px, max-content) 1fr',
                 gap: '6px 16px',
                 fontFamily: 'var(--font-mono)',
                 fontSize: 12,
