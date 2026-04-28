@@ -20,11 +20,27 @@ export const Route = createFileRoute('/login')({
   // signed-in users with a claimed workspace before we render.
   loader: async () => {
     const state = await loadLoginState()
+    // Signed-in user with a claimed workspace → straight to dashboard.
     if (state.signed_in && state.claimed_workspace_domain) {
       throw redirect({
-        to: '/dashboard/$domain/billing',
+        to: '/dashboard/$domain',
         params: { domain: state.claimed_workspace_domain },
       })
+    }
+    // Signed-in user mid-onboarding (paid but no claimed workspace
+    // yet) → resume the onboarding flow.
+    if (state.signed_in && state.incomplete_workspace_id) {
+      throw redirect({
+        to: '/onboard/$workspaceId',
+        params: { workspaceId: state.incomplete_workspace_id },
+        search: { failed: undefined },
+      })
+    }
+    // Signed-in user with no workspace at all → bounce to pricing
+    // so they can pick a plan. We no longer ask them to install
+    // the snippet first; the snippet shows after payment + verify.
+    if (state.signed_in) {
+      throw redirect({ to: '/', hash: 'pricing' })
     }
     return state
   },
@@ -44,7 +60,8 @@ type Stage = 'idle' | 'sending' | 'sent' | 'error'
 function LoginPage() {
   const search = useSearch({ from: '/login' })
   const state = Route.useLoaderData()
-  const signedInNoWorkspace = state.signed_in
+  // Signed-in users are redirected away in the loader before the
+  // component renders — only the magic-link / OAuth form remains here.
   const googleEnabled = state.google_enabled
   const magicLinkEnabled = state.magic_link_enabled
 
@@ -96,80 +113,6 @@ function LoginPage() {
       setStage('error')
       setError((err as Error).message || 'Failed to send magic link')
     }
-  }
-
-  if (signedInNoWorkspace) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          padding: 24,
-        }}
-      >
-        <div style={{ width: '100%', maxWidth: 460 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginBottom: 24,
-            }}
-          >
-            <LogoMark size={36} />
-            <div style={{ fontWeight: 700, fontSize: 18 }}>FeedbackBot</div>
-          </div>
-          <Slab num="02" right="next step">
-            You're signed in.
-          </Slab>
-          {planLabel && (
-            <div
-              style={{
-                padding: '10px 12px',
-                marginTop: 8,
-                marginBottom: 16,
-                border: '1.5px solid var(--accent)',
-                background: 'var(--surface-alt)',
-                fontSize: 13,
-                lineHeight: 1.5,
-              }}
-            >
-              Your <strong>{planLabel}</strong> pick is saved. We'll
-              auto-open checkout the moment you have a claimed workspace.
-            </div>
-          )}
-          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--fg-mute)' }}>
-            FeedbackBot bills per workspace. To upgrade, you first need
-            to install the widget on a site you control and claim the
-            workspace (DNS TXT record or an email on the matching
-            domain).
-          </p>
-          <ol
-            style={{
-              fontSize: 14,
-              lineHeight: 1.7,
-              color: 'var(--fg)',
-              paddingLeft: 20,
-              marginTop: 12,
-            }}
-          >
-            <li>Copy the install snippet from the landing page.</li>
-            <li>Drop it into your site's <code>&lt;head&gt;</code>.</li>
-            <li>Open the widget once — that registers the workspace.</li>
-            <li>Go to <code>/dashboard/&lt;your-domain&gt;/claim</code> and verify.</li>
-          </ol>
-          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <Btn as="a" href="/#get-started" variant="primary">
-              Install the widget
-            </Btn>
-            <Btn as="a" href="/" variant="ghost">
-              Back to home
-            </Btn>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (

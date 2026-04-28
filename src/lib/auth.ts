@@ -1,13 +1,11 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import {
-  anonymous,
   magicLink,
   oAuthProxy,
   organization,
 } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
-import { eq } from 'drizzle-orm'
 import DodoPayments from 'dodopayments'
 import {
   checkout,
@@ -19,7 +17,6 @@ import {
 import { env } from '#/env'
 import { makeDb } from '#/db/client'
 import * as authSchema from '#/db/schema'
-import { member } from '#/db/schema'
 import { handleDodoPayload } from '#/lib/billing/webhook-reducer'
 import { sendMail } from '#/lib/mailer'
 import { planProductsFor } from '#/lib/billing/plans'
@@ -54,10 +51,10 @@ function buildAuth() {
         }),
         use: [
           checkout({
-            // Payment-first flow needs anonymous users to pay before
-            // they upgrade to a real account via magic link. The
-            // workspace + subscription stay attached to the org as the
-            // anon user is merged into the real one in onLinkAccount.
+            // Pay-first flow has no session pre-checkout — visitor
+            // hits /api/checkout/start which creates the Dodo session
+            // directly. The post-payment success page mints the user
+            // + workspace via upsertPaidWorkspace.
             authenticatedUsersOnly: false,
             successUrl: '/dashboard/billing/success',
             // Resolved at request time inside the lazy Proxy so the
@@ -157,20 +154,6 @@ function buildAuth() {
             text: `${inviterName} invited you to join the ${orgName} workspace on FeedbackBot.\n\nAccept the invitation: ${url}\n\nLink doesn't expire — but feel free to ignore if you weren't expecting it.`,
             html: `<p><strong>${inviterName}</strong> invited you to join <strong>${orgName}</strong> on FeedbackBot.</p><p><a href="${url}">Accept the invitation</a></p><p style="color:#666;font-size:13px">Link doesn't expire — feel free to ignore if you weren't expecting it.</p>`,
           })
-        },
-      }),
-      anonymous({
-        emailDomainName: 'feedbackbot.internal',
-        // Fires when an anonymous user signs in with a real method
-        // (magic link, OAuth). We migrate every `member` row over so
-        // the org they created while anonymous now belongs to the
-        // real user. Better Auth deletes the anon user after.
-        onLinkAccount: async ({ anonymousUser, newUser }) => {
-          const db = makeDb(env.DB)
-          await db
-            .update(member)
-            .set({ userId: newUser.user.id })
-            .where(eq(member.userId, anonymousUser.user.id))
         },
       }),
       ...(dodoPlugin ? [dodoPlugin] : []),

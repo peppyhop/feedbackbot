@@ -1,10 +1,13 @@
 import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Check, Copy, Mail, RotateCw } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
 
 import { Btn, Chip, LogoMark, Slab } from '#/components/ui/brut'
 import { seoMeta } from '#/lib/seo'
+
+const INSTALL_SNIPPET =
+  '<script src="https://usefeedbackbot.com/widget.js" defer></script>'
 
 export const Route = createFileRoute('/onboard/$workspaceId')({
   component: OnboardPage,
@@ -54,9 +57,8 @@ type Stage =
   | 'not_found'
   | 'payment_failed'
   | 'enter_domain'
-  | 'secure_account'
-  | 'inbox_check'
   | 'verify_dns'
+  | 'connect_widget'
   | 'claimed'
 
 function OnboardPage() {
@@ -77,21 +79,35 @@ function OnboardPage() {
   })
 
   const workspace = me.data?.workspaces.find((w) => w.id === workspaceId)
-  const isAnonymous = me.data?.user?.is_anonymous ?? false
   const isPlaceholder =
     workspace?.domain.endsWith(PLACEHOLDER_DOMAIN_SUFFIX) ?? false
+
+  // Once VerifyDnsStep flips to verified the workspace is `claimed`
+  // server-side, but the UX inserts an explicit "connect widget" step
+  // between verification and the dashboard so the install snippet is
+  // the last thing they see (and the page they remember the URL of).
+  const [connectStep, setConnectStep] = useState(false)
 
   const stage: Stage = useMemo(() => {
     if (me.isLoading) return 'loading'
     if (failedStatus) return 'payment_failed'
     if (!workspace) return 'not_found'
+    if (connectStep) return 'connect_widget'
     if (workspace.state === 'claimed') return 'claimed'
     if (isPlaceholder) return 'enter_domain'
-    if (isAnonymous) return 'secure_account'
     return 'verify_dns'
-  }, [me.isLoading, failedStatus, workspace, isPlaceholder, isAnonymous])
+  }, [
+    me.isLoading,
+    failedStatus,
+    workspace,
+    isPlaceholder,
+    connectStep,
+  ])
 
-  // When the workspace hits `claimed`, jump into the dashboard.
+  // Auto-jump to the dashboard from `claimed` only when we're past
+  // the connect-widget step. `connectStep` keeps us parked here so
+  // the user gets one explicit "install the snippet" screen before
+  // landing in /dashboard.
   if (stage === 'claimed' && workspace) {
     window.location.replace(`/dashboard/${workspace.domain}`)
     return <Loading />
@@ -117,17 +133,15 @@ function OnboardPage() {
           />
         )}
 
-        {stage === 'secure_account' && workspace && (
-          <SecureAccountStep workspaceId={workspaceId} />
-        )}
-
         {stage === 'verify_dns' && workspace && (
           <VerifyDnsStep
             domain={workspace.domain}
-            onClaimed={() => {
-              window.location.href = `/dashboard/${workspace.domain}`
-            }}
+            onClaimed={() => setConnectStep(true)}
           />
+        )}
+
+        {stage === 'connect_widget' && workspace && (
+          <ConnectWidgetStep domain={workspace.domain} />
         )}
       </div>
     </div>
@@ -283,120 +297,98 @@ function EnterDomainStep({
   )
 }
 
-function SecureAccountStep({ workspaceId }: { workspaceId: string }) {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+function ConnectWidgetStep({ domain }: { domain: string }) {
+  const [copied, setCopied] = useState(false)
 
-  const send = useMutation({
-    mutationFn: async () => {
-      const res = await fetch('/api/auth/sign-in/magic-link', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          callbackURL: `/onboard/${workspaceId}`,
-        }),
-      })
-      if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(t || `HTTP ${res.status}`)
-      }
-    },
-    onSuccess: () => setSent(true),
-  })
-
-  if (sent) {
-    return (
-      <>
-        <Slab num="02" right="step 2 of 3">
-          Check your inbox.
-        </Slab>
-        <div
-          className="hi-card"
-          style={{
-            padding: 20,
-            marginTop: 8,
-            background: 'var(--surface-alt)',
-            borderColor: 'var(--accent)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 10,
-            }}
-          >
-            <Mail size={16} strokeWidth={2} />
-            <strong style={{ fontSize: 15 }}>
-              Link sent to <code>{email}</code>
-            </strong>
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--fg-mute)', lineHeight: 1.5 }}>
-            Click the link to secure this workspace to your account.
-            It expires in 5 minutes. When you're back, we'll take you
-            straight to DNS verification.
-          </p>
-          <div style={{ marginTop: 12 }}>
-            <Btn
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setSent(false)
-              }}
-            >
-              <RotateCw size={12} strokeWidth={2} /> Use a different
-              email
-            </Btn>
-          </div>
-        </div>
-      </>
-    )
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(INSTALL_SNIPPET)
+    } catch {
+      // clipboard denied — silent
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
   }
 
   return (
     <>
-      <Slab num="02" right="step 2 of 3">
-        Secure your workspace.
+      <Slab num="03" right="last step">
+        Connect your site.
       </Slab>
       <p style={{ fontSize: 14, color: 'var(--fg-mute)', marginBottom: 16 }}>
-        Enter the email you'll use to sign in. We'll send you a
-        one-click link and merge your current session into your real
-        account. Receipts go here too.
+        Add this script tag anywhere in your{' '}
+        <code className="h-mono" style={{ fontSize: 13 }}>
+          &lt;head&gt;
+        </code>{' '}
+        on{' '}
+        <code className="h-mono" style={{ fontSize: 13 }}>
+          {domain}
+        </code>
+        . Once it loads, the widget appears bottom-right and feedback
+        starts flowing into your dashboard.
       </p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          send.mutate()
-        }}
-        style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}
+
+      <div
+        className="hi-card hi-card-raised"
+        style={{ padding: 20, background: 'var(--surface)' }}
       >
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.currentTarget.value)}
-          placeholder="you@yourdomain.com"
-          required
-          autoComplete="email"
-          className="hi-focus"
+        <pre
+          className="h-mono"
           style={{
-            flex: 1,
-            minWidth: 200,
-            padding: '10px 12px',
-            border: '1.5px solid var(--border)',
-            background: 'var(--surface)',
+            margin: 0,
+            padding: 12,
+            background: 'var(--surface-alt)',
+            border: '1.5px solid var(--border-soft)',
+            fontSize: 13,
+            lineHeight: 1.5,
+            overflowX: 'auto',
+            whiteSpace: 'pre',
             color: 'var(--fg)',
-            fontSize: 15,
-            fontFamily: 'inherit',
           }}
-        />
-        <Btn variant="primary" disabled={send.isPending || !email}>
-          {send.isPending ? 'Sending…' : 'Send link'}
-        </Btn>
-      </form>
-      {send.error && <ErrBox msg={(send.error as Error).message} />}
+        >
+          {INSTALL_SNIPPET}
+        </pre>
+        <div
+          style={{
+            marginTop: 16,
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Btn variant="primary" onClick={onCopy}>
+            {copied ? (
+              <>
+                <Check size={14} strokeWidth={2} /> Copied
+              </>
+            ) : (
+              <>
+                <Copy size={14} strokeWidth={1.75} /> Copy snippet
+              </>
+            )}
+          </Btn>
+          <Btn
+            as="a"
+            href={`/dashboard/${domain}`}
+            variant="ghost"
+          >
+            Go to dashboard →
+          </Btn>
+        </div>
+      </div>
+      <p
+        className="h-mono"
+        style={{
+          marginTop: 12,
+          fontSize: 11,
+          color: 'var(--fg-faint)',
+          letterSpacing: '0.04em',
+        }}
+      >
+        No build step. No env vars. The worker keys tickets to your
+        domain via the Origin header.
+      </p>
     </>
   )
 }

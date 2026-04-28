@@ -1,7 +1,7 @@
 // GET /sitemap.xml — dynamic sitemap referenced by /robots.txt.
 //
 // Includes:
-//   • Public marketing pages (/, /login, /signup)
+//   • Public marketing pages (/, /login)
 //   • Public boards for every CLAIMED workspace (/b/<domain>)
 //
 // Excluded (per robots.txt + noindex meta):
@@ -20,7 +20,7 @@ import { makeDb } from '#/db/client'
 import { workspaces } from '#/db/schema'
 import { SITE_URL } from '#/lib/seo'
 
-const STATIC_PATHS = ['/', '/login', '/signup']
+const STATIC_PATHS = ['/', '/login']
 
 async function handle(_request: Request): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10)

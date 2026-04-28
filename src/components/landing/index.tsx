@@ -1062,7 +1062,7 @@ function Pricing() {
         'Public board',
       ],
       cta: 'Start with Lite',
-      href: '/signup?plan=lite',
+      href: '/api/checkout/start?plan=lite',
       primary: false,
     },
     {
@@ -1076,7 +1076,7 @@ function Pricing() {
         'Custom domain, no watermark',
       ],
       cta: 'Start with Starter',
-      href: '/signup?plan=starter',
+      href: '/api/checkout/start?plan=starter',
       primary: true,
     },
     {
@@ -1090,7 +1090,7 @@ function Pricing() {
         'SSO, audit log, API',
       ],
       cta: 'Choose Scale',
-      href: '/signup?plan=scale',
+      href: '/api/checkout/start?plan=scale',
       primary: false,
     },
   ]

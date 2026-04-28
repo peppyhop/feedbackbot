@@ -24,6 +24,10 @@ export type LoginState = {
   signed_in: boolean
   user: LoginUser | null
   claimed_workspace_domain: string | null
+  // First not-yet-claimed workspace the user owns — set when the
+  // user paid but didn't finish onboarding. Used by /login (and
+  // future entry points) to drop them back into /onboard/{ws}.
+  incomplete_workspace_id: string | null
 }
 
 export const loadLoginState = createServerFn({ method: 'GET' }).handler(
@@ -44,6 +48,7 @@ export const loadLoginState = createServerFn({ method: 'GET' }).handler(
         signed_in: false,
         user: null,
         claimed_workspace_domain: null,
+        incomplete_workspace_id: null,
       }
     }
 
@@ -62,6 +67,7 @@ export const loadLoginState = createServerFn({ method: 'GET' }).handler(
         signed_in: false,
         user: null,
         claimed_workspace_domain: null,
+        incomplete_workspace_id: null,
       }
     }
     const user: LoginUser = {
@@ -81,18 +87,25 @@ export const loadLoginState = createServerFn({ method: 'GET' }).handler(
         signed_in: true,
         user,
         claimed_workspace_domain: null,
+        incomplete_workspace_id: null,
       }
     }
-    const claimed = await db
-      .select({ domain: workspaces.domain, state: workspaces.state })
+    const ownedWorkspaces = await db
+      .select({
+        id: workspaces.id,
+        domain: workspaces.domain,
+        state: workspaces.state,
+      })
       .from(workspaces)
       .where(inArray(workspaces.betterAuthOrgId, orgIds))
-      .then((rows) => rows.find((w) => w.state === 'claimed'))
+    const claimed = ownedWorkspaces.find((w) => w.state === 'claimed')
+    const incomplete = ownedWorkspaces.find((w) => w.state !== 'claimed')
     return {
       ...flags,
       signed_in: true,
       user,
       claimed_workspace_domain: claimed?.domain ?? null,
+      incomplete_workspace_id: claimed ? null : (incomplete?.id ?? null),
     }
   },
 )

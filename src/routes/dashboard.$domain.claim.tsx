@@ -44,12 +44,13 @@ function ClaimPage() {
 
   return (
     <div style={{ maxWidth: 800 }}>
-      <Slab num="02" right={domain}>
-        Claim this workspace
+      <Slab num="—" right={domain}>
+        Re-verify domain
       </Slab>
       <p style={{ fontSize: 16, color: 'var(--fg-mute)', marginBottom: 32 }}>
-        Either path works. DNS is fastest if you don't have an email on the
-        matching domain.
+        New workspaces verify their domain during onboarding. Use this
+        page to re-verify if you rotated DNS records, lost the TXT
+        entry, or need to add an additional verification path.
       </p>
 
       {state.isLoading && <div>Loading…</div>}

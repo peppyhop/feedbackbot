@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OnboardWorkspaceIdRouteImport } from './routes/onboard.$workspaceId'
@@ -33,12 +32,11 @@ import { Route as DashboardDomainIntegrationsRouteImport } from './routes/dashbo
 import { Route as DashboardDomainDeliveriesRouteImport } from './routes/dashboard.$domain.deliveries'
 import { Route as DashboardDomainClaimRouteImport } from './routes/dashboard.$domain.claim'
 import { Route as DashboardDomainBillingRouteImport } from './routes/dashboard.$domain.billing'
-import { Route as ApiSignupStartCheckoutRouteImport } from './routes/api/signup/start-checkout'
-import { Route as ApiSignupAbandonRouteImport } from './routes/api/signup/abandon'
 import { Route as ApiScreenshotKeyRouteImport } from './routes/api/screenshot.$key'
 import { Route as ApiPublicTicketsRouteImport } from './routes/api/public.tickets'
 import { Route as ApiOnboardRenameRouteImport } from './routes/api/onboard/rename'
 import { Route as ApiMeWorkspacesRouteImport } from './routes/api/me.workspaces'
+import { Route as ApiCheckoutStartRouteImport } from './routes/api/checkout/start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdminTicketsRouteImport } from './routes/api/admin/tickets'
 import { Route as ApiAdminRedriveRouteImport } from './routes/api/admin/redrive'
@@ -60,11 +58,6 @@ import { Route as ApiAdminIntegrationsIdRoutesRouteImport } from './routes/api/a
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -179,16 +172,6 @@ const DashboardDomainBillingRoute = DashboardDomainBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => DashboardDomainRoute,
 } as any)
-const ApiSignupStartCheckoutRoute = ApiSignupStartCheckoutRouteImport.update({
-  id: '/api/signup/start-checkout',
-  path: '/api/signup/start-checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSignupAbandonRoute = ApiSignupAbandonRouteImport.update({
-  id: '/api/signup/abandon',
-  path: '/api/signup/abandon',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiScreenshotKeyRoute = ApiScreenshotKeyRouteImport.update({
   id: '/api/screenshot/$key',
   path: '/api/screenshot/$key',
@@ -207,6 +190,11 @@ const ApiOnboardRenameRoute = ApiOnboardRenameRouteImport.update({
 const ApiMeWorkspacesRoute = ApiMeWorkspacesRouteImport.update({
   id: '/api/me/workspaces',
   path: '/api/me/workspaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutStartRoute = ApiCheckoutStartRouteImport.update({
+  id: '/api/checkout/start',
+  path: '/api/checkout/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -304,7 +292,6 @@ const ApiAdminIntegrationsIdRoutesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
@@ -326,12 +313,11 @@ export interface FileRoutesByFullPath {
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
-  '/api/signup/abandon': typeof ApiSignupAbandonRoute
-  '/api/signup/start-checkout': typeof ApiSignupStartCheckoutRoute
   '/dashboard/$domain/billing': typeof DashboardDomainBillingRoute
   '/dashboard/$domain/claim': typeof DashboardDomainClaimRoute
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
@@ -353,7 +339,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
@@ -374,12 +359,11 @@ export interface FileRoutesByTo {
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
-  '/api/signup/abandon': typeof ApiSignupAbandonRoute
-  '/api/signup/start-checkout': typeof ApiSignupStartCheckoutRoute
   '/dashboard/$domain/billing': typeof DashboardDomainBillingRoute
   '/dashboard/$domain/claim': typeof DashboardDomainClaimRoute
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
@@ -402,7 +386,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/auth-state': typeof ApiAuthStateRoute
@@ -424,12 +407,11 @@ export interface FileRoutesById {
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
-  '/api/signup/abandon': typeof ApiSignupAbandonRoute
-  '/api/signup/start-checkout': typeof ApiSignupStartCheckoutRoute
   '/dashboard/$domain/billing': typeof DashboardDomainBillingRoute
   '/dashboard/$domain/claim': typeof DashboardDomainClaimRoute
   '/dashboard/$domain/deliveries': typeof DashboardDomainDeliveriesRoute
@@ -453,7 +435,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/signup'
     | '/sitemap.xml'
     | '/accept-invitation/$id'
     | '/api/auth-state'
@@ -475,12 +456,11 @@ export interface FileRouteTypes {
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
+    | '/api/checkout/start'
     | '/api/me/workspaces'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
-    | '/api/signup/abandon'
-    | '/api/signup/start-checkout'
     | '/dashboard/$domain/billing'
     | '/dashboard/$domain/claim'
     | '/dashboard/$domain/deliveries'
@@ -502,7 +482,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/signup'
     | '/sitemap.xml'
     | '/accept-invitation/$id'
     | '/api/auth-state'
@@ -523,12 +502,11 @@ export interface FileRouteTypes {
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
+    | '/api/checkout/start'
     | '/api/me/workspaces'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
-    | '/api/signup/abandon'
-    | '/api/signup/start-checkout'
     | '/dashboard/$domain/billing'
     | '/dashboard/$domain/claim'
     | '/dashboard/$domain/deliveries'
@@ -550,7 +528,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
-    | '/signup'
     | '/sitemap.xml'
     | '/accept-invitation/$id'
     | '/api/auth-state'
@@ -572,12 +549,11 @@ export interface FileRouteTypes {
     | '/api/admin/redrive'
     | '/api/admin/tickets'
     | '/api/auth/$'
+    | '/api/checkout/start'
     | '/api/me/workspaces'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
-    | '/api/signup/abandon'
-    | '/api/signup/start-checkout'
     | '/dashboard/$domain/billing'
     | '/dashboard/$domain/claim'
     | '/dashboard/$domain/deliveries'
@@ -600,7 +576,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   ApiAuthStateRoute: typeof ApiAuthStateRoute
@@ -622,12 +597,11 @@ export interface RootRouteChildren {
   ApiAdminRedriveRoute: typeof ApiAdminRedriveRoute
   ApiAdminTicketsRoute: typeof ApiAdminTicketsRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCheckoutStartRoute: typeof ApiCheckoutStartRoute
   ApiMeWorkspacesRoute: typeof ApiMeWorkspacesRoute
   ApiOnboardRenameRoute: typeof ApiOnboardRenameRoute
   ApiPublicTicketsRoute: typeof ApiPublicTicketsRoute
   ApiScreenshotKeyRoute: typeof ApiScreenshotKeyRoute
-  ApiSignupAbandonRoute: typeof ApiSignupAbandonRoute
-  ApiSignupStartCheckoutRoute: typeof ApiSignupStartCheckoutRoute
   DashboardBillingSuccessRoute: typeof DashboardBillingSuccessRoute
   ApiAdminInvitationsInvitationIdRoute: typeof ApiAdminInvitationsInvitationIdRoute
   ApiIntegrationsSlackCallbackRoute: typeof ApiIntegrationsSlackCallbackRoute
@@ -641,13 +615,6 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -804,20 +771,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDomainBillingRouteImport
       parentRoute: typeof DashboardDomainRoute
     }
-    '/api/signup/start-checkout': {
-      id: '/api/signup/start-checkout'
-      path: '/api/signup/start-checkout'
-      fullPath: '/api/signup/start-checkout'
-      preLoaderRoute: typeof ApiSignupStartCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/signup/abandon': {
-      id: '/api/signup/abandon'
-      path: '/api/signup/abandon'
-      fullPath: '/api/signup/abandon'
-      preLoaderRoute: typeof ApiSignupAbandonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/screenshot/$key': {
       id: '/api/screenshot/$key'
       path: '/api/screenshot/$key'
@@ -844,6 +797,13 @@ declare module '@tanstack/react-router' {
       path: '/api/me/workspaces'
       fullPath: '/api/me/workspaces'
       preLoaderRoute: typeof ApiMeWorkspacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout/start': {
+      id: '/api/checkout/start'
+      path: '/api/checkout/start'
+      fullPath: '/api/checkout/start'
+      preLoaderRoute: typeof ApiCheckoutStartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -1049,7 +1009,6 @@ const ApiAdminTicketsRouteWithChildren = ApiAdminTicketsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   ApiAuthStateRoute: ApiAuthStateRoute,
@@ -1071,12 +1030,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminRedriveRoute: ApiAdminRedriveRoute,
   ApiAdminTicketsRoute: ApiAdminTicketsRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCheckoutStartRoute: ApiCheckoutStartRoute,
   ApiMeWorkspacesRoute: ApiMeWorkspacesRoute,
   ApiOnboardRenameRoute: ApiOnboardRenameRoute,
   ApiPublicTicketsRoute: ApiPublicTicketsRoute,
   ApiScreenshotKeyRoute: ApiScreenshotKeyRoute,
-  ApiSignupAbandonRoute: ApiSignupAbandonRoute,
-  ApiSignupStartCheckoutRoute: ApiSignupStartCheckoutRoute,
   DashboardBillingSuccessRoute: DashboardBillingSuccessRoute,
   ApiAdminInvitationsInvitationIdRoute: ApiAdminInvitationsInvitationIdRoute,
   ApiIntegrationsSlackCallbackRoute: ApiIntegrationsSlackCallbackRoute,

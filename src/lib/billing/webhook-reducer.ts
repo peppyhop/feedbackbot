@@ -13,6 +13,7 @@ import {
   planFromSlug,
   type PlanId,
 } from '#/lib/billing/plans'
+import { upsertPaidWorkspace } from '#/lib/billing/upsert-paid-workspace'
 
 type DodoPayload = {
   business_id?: string
@@ -110,10 +111,26 @@ export async function handleDodoPayload(
     .limit(1)
   if (existing[0]) return
 
-  const workspaceId = await resolveWorkspaceId(db, payload.data)
+  let workspaceId = await resolveWorkspaceId(db, payload.data)
 
   let error: string | null = null
   try {
+    // Pay-first flow: when the success-page redirect doesn't run (user
+    // closed the tab between Dodo and our redirect), the first time we
+    // hear about the new subscription is this webhook. Materialize the
+    // user + workspace here so the user can recover via magic-link
+    // sign-in later. Idempotent on subscription_id.
+    if (
+      !workspaceId &&
+      payload.type === 'subscription.active' &&
+      payload.data
+    ) {
+      const created = await tryFirstPaymentUpsert(db, payload.data)
+      if (created) {
+        workspaceId = created
+      }
+    }
+
     if (workspaceId && payload.data) {
       // Belt-and-suspenders: if the workspace was deleted between
       // checkout creation and this event arriving (e.g. we cleaned up
@@ -215,4 +232,32 @@ async function applyEvent(
     default:
       return
   }
+}
+
+// Tab-close-recovery: if the user paid but never reached our success
+// page, this is the first place we learn about the new subscription.
+// Pull the email + customer fields off the webhook payload (Dodo
+// puts the verified email on `customer.email`) and run the same
+// upsert the success page would have. Returns the created/found
+// workspace id, or null if we can't attribute this event.
+async function tryFirstPaymentUpsert(
+  db: ReturnType<typeof makeDb>,
+  data: Record<string, unknown>,
+): Promise<string | null> {
+  const f = subscriptionFields(data)
+  if (!f.subscriptionId) return null
+  const customer = (data.customer ?? {}) as {
+    email?: string | null
+  }
+  const email =
+    typeof customer.email === 'string' ? customer.email.toLowerCase() : null
+  if (!email) return null
+  const { workspaceId } = await upsertPaidWorkspace(db, {
+    email,
+    plan: f.plan,
+    subscriptionId: f.subscriptionId,
+    customerId: f.customerId,
+    currentPeriodEnd: f.nextBillingDate,
+  })
+  return workspaceId
 }
