@@ -23,7 +23,9 @@ import {
 
 const VALID_PLANS: ReadonlySet<PlanId> = new Set(['lite', 'starter', 'scale'])
 
-async function handle(request: Request): Promise<Response> {
+// Exported so tests can call the handler directly without going
+// through TanStack's route registration.
+export async function handle(request: Request): Promise<Response> {
   try {
     if (!env.DODO_PAYMENTS_API_KEY) {
       throw new ApiError(503, 'billing not configured', 'not_configured')

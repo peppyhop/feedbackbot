@@ -12,7 +12,8 @@ import { z } from 'zod'
 import DodoPayments from 'dodopayments'
 
 import { env } from '#/env'
-import { makeDb } from '#/db/client'
+import type { Env } from '#/env'
+import { makeDb, type DB } from '#/db/client'
 import { verification } from '#/db/schema'
 import {
   PRODUCT_ID_TO_SLUG,
@@ -55,103 +56,127 @@ const InputSchema = z.object({
   cs: z.string().min(1),
 })
 
+// Subset of the DodoPayments client we actually call. Lets tests
+// inject a stub without depending on the real SDK shape.
+export type DodoClient = {
+  checkoutSessions: {
+    retrieve(id: string): Promise<unknown>
+  }
+}
+
+// Pulled out of the createServerFn wrapper so tests can drive it
+// with stubbed deps (env / db / dodo). The wrapper below plumbs in
+// the real ones — env binding, makeDb(env.DB), real DodoPayments.
+export async function runCompleteCheckout(opts: {
+  data: { cs: string }
+  env: Pick<Env, 'BETTER_AUTH_URL' | 'DODO_PAYMENTS_API_KEY' | 'DODO_PAYMENTS_ENV'>
+  db: DB
+  dodo: DodoClient
+}): Promise<CompleteCheckoutResult> {
+  const cs = opts.data.cs
+
+  if (!opts.env.DODO_PAYMENTS_API_KEY) {
+    return { kind: 'redirect', url: '/' }
+  }
+
+  const session = (await opts.dodo.checkoutSessions.retrieve(
+    cs,
+  )) as unknown as DodoCheckoutSession
+
+  const status = session.payment_status ?? session.status ?? ''
+  if (status && status !== 'active' && status !== 'succeeded') {
+    // Payment failed — there's no workspace to send them to. Land
+    // on the homepage pricing section with a query param so future
+    // UI can pick it up.
+    return {
+      kind: 'redirect',
+      url: `/?failed=${encodeURIComponent(status)}#pricing`,
+    }
+  }
+
+  const email =
+    session.customer?.email?.toLowerCase() ??
+    session.customer_email?.toLowerCase() ??
+    null
+  const subscriptionId = session.subscription_id ?? null
+  if (!email || !subscriptionId) {
+    // Dodo paid us but didn't return the fields we need to attribute
+    // it. Fall back to the homepage; the webhook will fire and the
+    // user can sign in via magic-link to recover.
+    return { kind: 'redirect', url: '/' }
+  }
+
+  const metadata = session.metadata ?? {}
+  const metaSlug =
+    typeof metadata.slug === 'string' && metadata.slug
+      ? metadata.slug
+      : null
+  const productId = session.product_cart?.[0]?.product_id ?? null
+  const fallbackSlug = productId ? PRODUCT_ID_TO_SLUG[productId] : null
+  const plan: PlanId = planFromSlug(metaSlug ?? fallbackSlug)
+  const customerId =
+    session.customer && typeof session.customer === 'object'
+      ? (session.customer.customer_id ?? null)
+      : null
+  const nextBillingDate =
+    typeof session.next_billing_date === 'string'
+      ? Date.parse(session.next_billing_date)
+      : null
+  const currentPeriodEnd = Number.isFinite(nextBillingDate)
+    ? (nextBillingDate as number)
+    : null
+
+  const { workspaceId } = await upsertPaidWorkspace(opts.db, {
+    email,
+    plan,
+    subscriptionId,
+    customerId,
+    currentPeriodEnd,
+  })
+
+  // Mint a magic-link verification value directly so the user can
+  // be signed in via better-auth's verify endpoint without an email
+  // round-trip. Format mirrors the magic-link plugin's own writes
+  // (storeToken: 'plain', value contains email + name + attempt).
+  const token = magicLinkToken()
+  const now = Date.now()
+  await opts.db.insert(verification).values({
+    id: `vrf_${verificationId()}`,
+    identifier: token,
+    value: JSON.stringify({ email, name: '', attempt: 0 }),
+    expiresAt: new Date(now + MAGIC_LINK_TTL_MS),
+    createdAt: new Date(now),
+    updatedAt: new Date(now),
+  })
+
+  const baseUrl =
+    opts.env.BETTER_AUTH_URL && opts.env.BETTER_AUTH_URL.length > 0
+      ? opts.env.BETTER_AUTH_URL
+      : null
+  const callbackPath = `/onboard/${workspaceId}`
+  // When BETTER_AUTH_URL isn't set (preview / local), return a
+  // relative URL so the browser stays on whatever origin it just
+  // landed on — the verify endpoint is registered at /api/auth/...
+  // on every stage.
+  const verifyPath = `/api/auth/magic-link/verify?token=${encodeURIComponent(
+    token,
+  )}&callbackURL=${encodeURIComponent(callbackPath)}`
+  const url = baseUrl ? `${baseUrl}${verifyPath}` : verifyPath
+  return { kind: 'redirect', url }
+}
+
 export const completeCheckout = createServerFn({ method: 'GET' })
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data }): Promise<CompleteCheckoutResult> => {
-    const cs = data.cs
-
-    if (!env.DODO_PAYMENTS_API_KEY) {
-      return { kind: 'redirect', url: '/' }
-    }
-
     const dodo = new DodoPayments({
-      bearerToken: env.DODO_PAYMENTS_API_KEY,
+      bearerToken: env.DODO_PAYMENTS_API_KEY ?? '',
       environment:
         env.DODO_PAYMENTS_ENV === 'live_mode' ? 'live_mode' : 'test_mode',
     })
-    const session = (await dodo.checkoutSessions.retrieve(
-      cs,
-    )) as unknown as DodoCheckoutSession
-
-    const status = session.payment_status ?? session.status ?? ''
-    if (status && status !== 'active' && status !== 'succeeded') {
-      // Payment failed — there's no workspace to send them to. Land
-      // on the homepage pricing section with a query param so future
-      // UI can pick it up.
-      return {
-        kind: 'redirect',
-        url: `/?failed=${encodeURIComponent(status)}#pricing`,
-      }
-    }
-
-    const email =
-      session.customer?.email?.toLowerCase() ??
-      session.customer_email?.toLowerCase() ??
-      null
-    const subscriptionId = session.subscription_id ?? null
-    if (!email || !subscriptionId) {
-      // Dodo paid us but didn't return the fields we need to attribute
-      // it. Fall back to the homepage; the webhook will fire and the
-      // user can sign in via magic-link to recover.
-      return { kind: 'redirect', url: '/' }
-    }
-
-    const metadata = session.metadata ?? {}
-    const metaSlug =
-      typeof metadata.slug === 'string' && metadata.slug
-        ? metadata.slug
-        : null
-    const productId = session.product_cart?.[0]?.product_id ?? null
-    const fallbackSlug = productId ? PRODUCT_ID_TO_SLUG[productId] : null
-    const plan: PlanId = planFromSlug(metaSlug ?? fallbackSlug)
-    const customerId =
-      session.customer && typeof session.customer === 'object'
-        ? (session.customer.customer_id ?? null)
-        : null
-    const nextBillingDate =
-      typeof session.next_billing_date === 'string'
-        ? Date.parse(session.next_billing_date)
-        : null
-    const currentPeriodEnd = Number.isFinite(nextBillingDate)
-      ? (nextBillingDate as number)
-      : null
-
-    const db = makeDb(env.DB)
-    const { workspaceId } = await upsertPaidWorkspace(db, {
-      email,
-      plan,
-      subscriptionId,
-      customerId,
-      currentPeriodEnd,
+    return runCompleteCheckout({
+      data,
+      env,
+      db: makeDb(env.DB),
+      dodo,
     })
-
-    // Mint a magic-link verification value directly so the user can
-    // be signed in via better-auth's verify endpoint without an email
-    // round-trip. Format mirrors the magic-link plugin's own writes
-    // (storeToken: 'plain', value contains email + name + attempt).
-    const token = magicLinkToken()
-    const now = Date.now()
-    await db.insert(verification).values({
-      id: `vrf_${verificationId()}`,
-      identifier: token,
-      value: JSON.stringify({ email, name: '', attempt: 0 }),
-      expiresAt: new Date(now + MAGIC_LINK_TTL_MS),
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
-    })
-
-    const baseUrl =
-      env.BETTER_AUTH_URL && env.BETTER_AUTH_URL.length > 0
-        ? env.BETTER_AUTH_URL
-        : null
-    const callbackPath = `/onboard/${workspaceId}`
-    // When BETTER_AUTH_URL isn't set (preview / local), return a
-    // relative URL so the browser stays on whatever origin it just
-    // landed on — the verify endpoint is registered at /api/auth/...
-    // on every stage.
-    const verifyPath = `/api/auth/magic-link/verify?token=${encodeURIComponent(
-      token,
-    )}&callbackURL=${encodeURIComponent(callbackPath)}`
-    const url = baseUrl ? `${baseUrl}${verifyPath}` : verifyPath
-    return { kind: 'redirect', url }
   })

@@ -9,8 +9,9 @@ import { getRequest } from '@tanstack/react-start/server'
 import { eq, inArray } from 'drizzle-orm'
 
 import { env } from '#/env'
+import type { Env } from '#/env'
 import { auth } from '#/lib/auth'
-import { makeDb } from '#/db/client'
+import { makeDb, type DB } from '#/db/client'
 import { member, workspaces } from '#/db/schema'
 
 export type LoginUser = {
@@ -30,82 +31,104 @@ export type LoginState = {
   incomplete_workspace_id: string | null
 }
 
-export const loadLoginState = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<LoginState> => {
-    const request = getRequest()
-    const flags = {
-      google_enabled:
-        !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET,
-      magic_link_enabled: !!env.RESEND_API_KEY,
-    }
-
-    const session = await auth.api
-      .getSession({ headers: request.headers })
-      .catch(() => null)
-    if (!session?.user) {
-      return {
-        ...flags,
-        signed_in: false,
-        user: null,
-        claimed_workspace_domain: null,
-        incomplete_workspace_id: null,
-      }
-    }
-
-    const sessionUser = session.user as {
+// Pulled out of the server-fn wrapper so tests can call this with
+// stubbed deps (no TanStack RPC context, no real auth proxy, no
+// env binding). The wrapper below just plumbs in the real ones.
+export type LoginStateDeps = {
+  env: Env
+  db: DB
+  headers: Headers
+  getSession: (opts: { headers: Headers }) => Promise<{
+    user?: {
       id: string
       email: string
       name?: string | null
       isAnonymous?: boolean
     }
-    // Anonymous users are an internal pre-claim placeholder; treat
-    // them as not-signed-in for landing-page purposes so we don't
-    // render a profile menu for an unclaimed checkout session.
-    if (sessionUser.isAnonymous) {
-      return {
-        ...flags,
-        signed_in: false,
-        user: null,
-        claimed_workspace_domain: null,
-        incomplete_workspace_id: null,
-      }
-    }
-    const user: LoginUser = {
-      email: sessionUser.email,
-      name: sessionUser.name ?? null,
-    }
+  } | null>
+}
 
-    const db = makeDb(env.DB)
-    const memberships = await db
-      .select({ organizationId: member.organizationId })
-      .from(member)
-      .where(eq(member.userId, sessionUser.id))
-    const orgIds = memberships.map((m) => m.organizationId)
-    if (orgIds.length === 0) {
-      return {
-        ...flags,
-        signed_in: true,
-        user,
-        claimed_workspace_domain: null,
-        incomplete_workspace_id: null,
-      }
+export async function buildLoginState(
+  deps: LoginStateDeps,
+): Promise<LoginState> {
+  const flags = {
+    google_enabled:
+      !!deps.env.GOOGLE_CLIENT_ID && !!deps.env.GOOGLE_CLIENT_SECRET,
+    magic_link_enabled: !!deps.env.RESEND_API_KEY,
+  }
+
+  const session = await deps
+    .getSession({ headers: deps.headers })
+    .catch(() => null)
+  if (!session?.user) {
+    return {
+      ...flags,
+      signed_in: false,
+      user: null,
+      claimed_workspace_domain: null,
+      incomplete_workspace_id: null,
     }
-    const ownedWorkspaces = await db
-      .select({
-        id: workspaces.id,
-        domain: workspaces.domain,
-        state: workspaces.state,
-      })
-      .from(workspaces)
-      .where(inArray(workspaces.betterAuthOrgId, orgIds))
-    const claimed = ownedWorkspaces.find((w) => w.state === 'claimed')
-    const incomplete = ownedWorkspaces.find((w) => w.state !== 'claimed')
+  }
+
+  const sessionUser = session.user
+  // Anonymous users are an internal pre-claim placeholder; treat
+  // them as not-signed-in for landing-page purposes so we don't
+  // render a profile menu for an unclaimed checkout session.
+  if (sessionUser.isAnonymous) {
+    return {
+      ...flags,
+      signed_in: false,
+      user: null,
+      claimed_workspace_domain: null,
+      incomplete_workspace_id: null,
+    }
+  }
+  const user: LoginUser = {
+    email: sessionUser.email,
+    name: sessionUser.name ?? null,
+  }
+
+  const memberships = await deps.db
+    .select({ organizationId: member.organizationId })
+    .from(member)
+    .where(eq(member.userId, sessionUser.id))
+  const orgIds = memberships.map((m) => m.organizationId)
+  if (orgIds.length === 0) {
     return {
       ...flags,
       signed_in: true,
       user,
-      claimed_workspace_domain: claimed?.domain ?? null,
-      incomplete_workspace_id: claimed ? null : (incomplete?.id ?? null),
+      claimed_workspace_domain: null,
+      incomplete_workspace_id: null,
     }
+  }
+  const ownedWorkspaces = await deps.db
+    .select({
+      id: workspaces.id,
+      domain: workspaces.domain,
+      state: workspaces.state,
+    })
+    .from(workspaces)
+    .where(inArray(workspaces.betterAuthOrgId, orgIds))
+  const claimed = ownedWorkspaces.find((w) => w.state === 'claimed')
+  const incomplete = ownedWorkspaces.find((w) => w.state !== 'claimed')
+  return {
+    ...flags,
+    signed_in: true,
+    user,
+    claimed_workspace_domain: claimed?.domain ?? null,
+    incomplete_workspace_id: claimed ? null : (incomplete?.id ?? null),
+  }
+}
+
+export const loadLoginState = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<LoginState> => {
+    const request = getRequest()
+    return buildLoginState({
+      env,
+      db: makeDb(env.DB),
+      headers: request.headers,
+      getSession: (opts) => auth.api.getSession(opts),
+    })
   },
 )
