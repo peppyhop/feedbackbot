@@ -6,31 +6,22 @@ import { createFileRoute } from '@tanstack/react-router'
 import { and, eq, gt, sql } from 'drizzle-orm'
 
 import { env } from '#/env'
-import { getWorkspaceByDomain, makeDb } from '#/db/client'
 import { tickets } from '#/db/schema'
-import { normalizeDomain } from '#/lib/domain'
 import {
-  ApiError,
   apiError,
   corsHeadersFor,
   json,
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 import { PLAN_LABEL, type PlanId } from '#/lib/billing/plans'
 import { entitlementsFor } from '#/lib/billing/entitlements'
 
 async function handle(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const url = new URL(request.url)
-    const domain = normalizeDomain(url.searchParams.get('domain'))
-    if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-    const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-    await requireAdmin(request, workspace)
+    const { workspace, db } = await requireAdminWorkspace(request)
 
     const plan = (workspace.plan as PlanId) ?? 'free'
     const ent = entitlementsFor(plan)

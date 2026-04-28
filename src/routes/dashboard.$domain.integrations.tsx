@@ -39,6 +39,23 @@ type RouteRow = {
   enabled: boolean
 }
 
+// Shared route-list query so the two callers (the inline route
+// editor + the SlackRoutesEditor below) don't drift on cache key
+// shape or fetch options.
+function useIntegrationRoutes(integrationId: string, domain: string) {
+  return useQuery({
+    queryKey: ['integration-routes', integrationId, domain],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/admin/integrations/${encodeURIComponent(integrationId)}/routes?domain=${encodeURIComponent(domain)}`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()) as { routes: Array<RouteRow> }
+    },
+  })
+}
+
 export const Route = createFileRoute('/dashboard/$domain/integrations')({
   component: IntegrationsPage,
   validateSearch: (input) => searchSchema.parse(input),
@@ -296,17 +313,7 @@ function SlackRoutesEditor({
     },
   })
 
-  const routes = useQuery({
-    queryKey: ['integration-routes', integrationId, domain],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/admin/integrations/${encodeURIComponent(integrationId)}/routes?domain=${encodeURIComponent(domain)}`,
-        { credentials: 'include' },
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return (await res.json()) as { routes: Array<RouteRow> }
-    },
-  })
+  const routes = useIntegrationRoutes(integrationId, domain)
 
   const [draft, setDraft] = useState<Record<TicketKind, string>>({
     bug: '',
@@ -492,17 +499,7 @@ function WebhookRoutesReadonly({
   integrationId: string
   domain: string
 }) {
-  const routes = useQuery({
-    queryKey: ['integration-routes', integrationId, domain],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/admin/integrations/${encodeURIComponent(integrationId)}/routes?domain=${encodeURIComponent(domain)}`,
-        { credentials: 'include' },
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return (await res.json()) as { routes: Array<RouteRow> }
-    },
-  })
+  const routes = useIntegrationRoutes(integrationId, domain)
   if (routes.isLoading) {
     return (
       <div style={{ color: 'var(--fg-mute)', fontSize: 13 }}>Loading…</div>

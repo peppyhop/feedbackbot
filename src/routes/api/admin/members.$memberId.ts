@@ -4,10 +4,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 
-import { env } from '#/env'
 import { auth } from '#/lib/auth'
-import { getWorkspaceByDomain, makeDb } from '#/db/client'
-import { normalizeDomain } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -16,28 +13,19 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 
 async function handle(request: Request, memberId: string): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const url = new URL(request.url)
-    const domain = normalizeDomain(url.searchParams.get('domain'))
-    if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
     if (!memberId) throw new ApiError(400, 'bad member id', 'bad_id')
-    const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-    await requireAdmin(request, workspace)
-    if (!workspace.betterAuthOrgId) {
-      throw new ApiError(409, 'workspace not claimed', 'no_org')
-    }
+    const { workspace } = await requireAdminWorkspace(request)
 
     await auth.api
       .removeMember({
         body: {
           memberIdOrEmail: memberId,
-          organizationId: workspace.betterAuthOrgId,
+          organizationId: workspace.betterAuthOrgId as string,
         },
         headers: request.headers,
       })

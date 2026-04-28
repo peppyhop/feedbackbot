@@ -6,15 +6,11 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 
-import { env } from '#/env'
 import {
   getTicket,
-  getWorkspaceByDomain,
   listComments,
-  makeDb,
   patchTicket,
 } from '#/db/client'
-import { normalizeDomain } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -23,19 +19,11 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 import { TicketPatchSchema } from '#/schema/ticket'
 
 async function loadContext(request: Request, ticketId: string) {
-  const url = new URL(request.url)
-  const domain = normalizeDomain(url.searchParams.get('domain'))
-  if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-
-  const db = makeDb(env.DB)
-  const workspace = await getWorkspaceByDomain(db, domain)
-  if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-  await requireAdmin(request, workspace)
-
+  const { workspace, db } = await requireAdminWorkspace(request)
   const ticket = await getTicket(db, workspace.id, ticketId)
   if (!ticket) throw new ApiError(404, 'no ticket', 'no_ticket')
   return { db, workspace, ticket }

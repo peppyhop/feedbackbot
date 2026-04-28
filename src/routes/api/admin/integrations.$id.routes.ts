@@ -5,16 +5,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
-import { env } from '#/env'
 import {
   deleteRoutesForIntegration,
   getIntegration,
-  getWorkspaceByDomain,
   insertRoute,
   listRoutesForIntegration,
-  makeDb,
 } from '#/db/client'
-import { normalizeDomain } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -23,7 +19,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 import { ClassificationKindSchema } from '#/schema/ticket'
 
 const RoutesReplaceSchema = z.object({
@@ -36,15 +32,7 @@ const RoutesReplaceSchema = z.object({
 })
 
 async function loadContext(request: Request, integrationId: string) {
-  const url = new URL(request.url)
-  const domain = normalizeDomain(url.searchParams.get('domain'))
-  if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-
-  const db = makeDb(env.DB)
-  const workspace = await getWorkspaceByDomain(db, domain)
-  if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-  await requireAdmin(request, workspace)
-
+  const { workspace, db } = await requireAdminWorkspace(request)
   const integration = await getIntegration(db, workspace.id, integrationId)
   if (!integration) throw new ApiError(404, 'no integration', 'no_integration')
   return { db, workspace, integration }

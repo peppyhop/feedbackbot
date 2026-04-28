@@ -5,24 +5,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { and, eq, inArray } from 'drizzle-orm'
 
-import { env } from '#/env'
 import {
-  getWorkspaceByDomain,
   listDeliveries,
-  makeDb,
   type DeliveryStatus,
 } from '#/db/client'
 import { integrations, tickets } from '#/db/schema'
-import { normalizeDomain } from '#/lib/domain'
 import {
-  ApiError,
   apiError,
   corsHeadersFor,
   json,
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 
 const DELIVERY_STATUSES: ReadonlyArray<DeliveryStatus> = [
   'pending',
@@ -34,14 +29,8 @@ const DELIVERY_STATUSES: ReadonlyArray<DeliveryStatus> = [
 async function handle(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
+    const { workspace, db } = await requireAdminWorkspace(request)
     const url = new URL(request.url)
-    const domain = normalizeDomain(url.searchParams.get('domain'))
-    if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-
-    const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-    await requireAdmin(request, workspace)
 
     const rawStatus = url.searchParams.get('status')
     const status = DELIVERY_STATUSES.includes(rawStatus as DeliveryStatus)

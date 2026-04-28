@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { env } from '#/env'
 import { getTicket, insertVote, makeDb } from '#/db/client'
-import { domainFromHeader } from '#/lib/domain'
 import { daySaltFor, ipHash } from '#/lib/crypto'
 import { voteFingerprint, VOTE_COOKIE, VOTE_COOKIE_MAX_AGE, newAnonCookieId } from '#/lib/fingerprint'
 import {
@@ -14,7 +13,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { getWorkspaceByDomain } from '#/db/client'
+import { getWorkspaceFromOrigin } from '#/lib/workspace-scope'
 import { VoteSchema, type VoteResponse } from '#/schema/vote'
 
 const postVote = withRequestMetrics('/api/vote', handleVote)
@@ -31,18 +30,11 @@ export const Route = createFileRoute('/api/vote')({
 async function handleVote(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const domain = domainFromHeader(
-      request.headers.get('origin'),
-      request.headers.get('referer'),
-    )
-    if (!domain) throw new ApiError(400, 'bad origin', 'bad_origin')
-
     const body = VoteSchema.safeParse(await request.json().catch(() => null))
     if (!body.success) throw new ApiError(400, 'bad body', 'bad_body')
 
     const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
+    const workspace = await getWorkspaceFromOrigin(db, request)
 
     const ticket = await getTicket(db, workspace.id, body.data.ticket_id)
     if (!ticket) throw new ApiError(404, 'no ticket', 'no_ticket')

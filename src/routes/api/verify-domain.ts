@@ -22,6 +22,7 @@ import {
 import { withRequestMetrics } from '#/lib/analytics'
 import { VerifyDomainSchema, type VerifyDomainResponse } from '#/schema/claim'
 import { auth } from '#/lib/auth'
+import { requireSession } from '#/lib/admin-auth'
 
 const postVerify = withRequestMetrics('/api/verify-domain', handle)
 
@@ -44,11 +45,7 @@ async function handle(request: Request): Promise<Response> {
     const domain = normalizeDomain(body.data.domain)
     if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
 
-    const session = await auth.api
-      .getSession({ headers: request.headers })
-      .catch(() => null)
-    if (!session?.user) throw new ApiError(401, 'sign in required', 'unauth')
-
+    const { userId } = await requireSession(request)
     const db = makeDb(env.DB)
     const workspace = await getWorkspaceByDomain(db, domain)
     if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
@@ -66,10 +63,10 @@ async function handle(request: Request): Promise<Response> {
     // wins owner; subsequent claim-attempts via email-match add
     // themselves as members (handled in a different endpoint).
     if (workspace.state === 'pending') {
-      const lock = await acquireClaimLock(env.CLAIM_LOCK, domain, session.user.id)
+      const lock = await acquireClaimLock(env.CLAIM_LOCK, domain, userId)
       console.log('verify-domain.claim-lock', {
         domain,
-        user_id: session.user.id,
+        user_id: userId,
         acquired: lock.acquired,
         owner_user_id: lock.owner_user_id,
       })
@@ -99,11 +96,11 @@ async function handle(request: Request): Promise<Response> {
         await writeAudit(db, {
           workspaceId: workspace.id,
           action: 'workspace.claim.dns',
-          actorUserId: session.user.id,
+          actorUserId: userId,
           actorIpHash: hash,
           metadata: { domain, method: 'dns' },
         })
-      } else if (lock.owner_user_id !== session.user.id) {
+      } else if (lock.owner_user_id !== userId) {
         // Lock held by a different user (usually an orphan anonymous
         // user from before the magic-link merge). Claim the workspace
         // anyway if the current user is a member of its org.
@@ -118,7 +115,7 @@ async function handle(request: Request): Promise<Response> {
           await writeAudit(db, {
             workspaceId: workspace.id,
             action: 'workspace.claim.dns.lock-bypass',
-            actorUserId: session.user.id,
+            actorUserId: userId,
             actorIpHash: hash,
             metadata: { domain, method: 'dns', prior_lock_owner: lock.owner_user_id },
           })

@@ -13,7 +13,6 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { env } from '#/env'
-import { auth } from '#/lib/auth'
 import { makeDb } from '#/db/client'
 import {
   member,
@@ -30,6 +29,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
+import { requireSession } from '#/lib/admin-auth'
 import { writeAudit } from '#/db/client'
 
 const RenameSchema = z.object({
@@ -47,13 +47,7 @@ async function handle(request: Request): Promise<Response> {
     const domain = normalizeDomain(body.data.domain)
     if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
 
-    const session = await auth.api
-      .getSession({ headers: request.headers })
-      .catch(() => null)
-    if (!session?.user) {
-      throw new ApiError(401, 'sign in required', 'unauth')
-    }
-
+    const { userId } = await requireSession(request)
     const db = makeDb(env.DB)
 
     // Find the workspace.
@@ -82,7 +76,7 @@ async function handle(request: Request): Promise<Response> {
       .where(
         and(
           eq(member.organizationId, ws.betterAuthOrgId),
-          eq(member.userId, session.user.id),
+          eq(member.userId, userId),
         ),
       )
       .limit(1)
@@ -125,7 +119,7 @@ async function handle(request: Request): Promise<Response> {
     await writeAudit(db, {
       workspaceId: ws.id,
       action: 'workspace.rename',
-      actorUserId: session.user.id,
+      actorUserId: userId,
       metadata: { from: ws.domain, to: domain },
     })
 

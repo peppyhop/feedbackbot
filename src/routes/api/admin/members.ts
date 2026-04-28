@@ -5,10 +5,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
-import { env } from '#/env'
 import { auth } from '#/lib/auth'
-import { getWorkspaceByDomain, makeDb } from '#/db/client'
-import { normalizeDomain } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -17,7 +14,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 import { entitlementsFor } from '#/lib/billing/entitlements'
 
 const InviteSchema = z.object({
@@ -25,43 +22,52 @@ const InviteSchema = z.object({
   role: z.enum(['member', 'admin']).default('member'),
 })
 
-async function loadWorkspace(request: Request) {
-  const url = new URL(request.url)
-  const domain = normalizeDomain(url.searchParams.get('domain'))
-  if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-  const db = makeDb(env.DB)
-  const workspace = await getWorkspaceByDomain(db, domain)
-  if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-  await requireAdmin(request, workspace)
-  if (!workspace.betterAuthOrgId) {
-    throw new ApiError(409, 'workspace not claimed', 'no_org')
-  }
-  return { db, workspace, orgId: workspace.betterAuthOrgId }
+async function loadWorkspaceWithOrg(request: Request) {
+  // requireAdminWorkspace already guarantees betterAuthOrgId is set
+  // (it throws not_claimed otherwise) — the cast here just narrows
+  // for callers that need the orgId in their type signature.
+  const { workspace, db } = await requireAdminWorkspace(request)
+  return { db, workspace, orgId: workspace.betterAuthOrgId as string }
+}
+
+// Better Auth's listMembers + listInvitations both 200 with potentially-
+// undefined shapes; flatten + count the pending rows here so handleList
+// and handleInvite stay focused on their seat-cap / response logic.
+async function loadMemberAndInviteCounts(
+  request: Request,
+  orgId: string,
+): Promise<{
+  members: Array<unknown>
+  pendingInvitations: Array<unknown>
+}> {
+  const [members, invitations] = await Promise.all([
+    auth.api
+      .listMembers({ query: { organizationId: orgId }, headers: request.headers })
+      .catch(() => null),
+    auth.api
+      .listInvitations({
+        query: { organizationId: orgId },
+        headers: request.headers,
+      })
+      .catch(() => null),
+  ])
+  const memberRows =
+    (members as { members?: Array<unknown> } | null)?.members ?? []
+  const pendingRows =
+    (invitations as Array<unknown> | null)?.filter((row) => {
+      const status = (row as { status?: string }).status
+      return status === 'pending'
+    }) ?? []
+  return { members: memberRows, pendingInvitations: pendingRows }
 }
 
 async function handleList(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const { workspace, orgId } = await loadWorkspace(request)
+    const { workspace, orgId } = await loadWorkspaceWithOrg(request)
     const ent = entitlementsFor(workspace.plan)
-
-    const [members, invitations] = await Promise.all([
-      auth.api
-        .listMembers({ query: { organizationId: orgId }, headers: request.headers })
-        .catch(() => null),
-      auth.api
-        .listInvitations({
-          query: { organizationId: orgId },
-          headers: request.headers,
-        })
-        .catch(() => null),
-    ])
-    const m = (members as { members?: Array<unknown> } | null)?.members ?? []
-    const i =
-      (invitations as Array<unknown> | null)?.filter((row) => {
-        const status = (row as { status?: string }).status
-        return status === 'pending'
-      }) ?? []
+    const { members: m, pendingInvitations: i } =
+      await loadMemberAndInviteCounts(request, orgId)
 
     return json(
       {
@@ -113,7 +119,7 @@ async function handleList(request: Request): Promise<Response> {
 async function handleInvite(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const { workspace, orgId } = await loadWorkspace(request)
+    const { workspace, orgId } = await loadWorkspaceWithOrg(request)
     const body = InviteSchema.safeParse(
       await request.json().catch(() => null),
     )
@@ -122,28 +128,14 @@ async function handleInvite(request: Request): Promise<Response> {
 
     // Seat-cap enforcement: count existing members + pending invites,
     // reject before Better Auth creates the invitation row.
-    const [members, invitations] = await Promise.all([
-      auth.api
-        .listMembers({ query: { organizationId: orgId }, headers: request.headers })
-        .catch(() => null),
-      auth.api
-        .listInvitations({
-          query: { organizationId: orgId },
-          headers: request.headers,
-        })
-        .catch(() => null),
-    ])
-    const memberCount =
-      (members as { members?: Array<unknown> } | null)?.members?.length ?? 0
-    const pendingCount =
-      (invitations as Array<unknown> | null)?.filter((row) => {
-        const status = (row as { status?: string }).status
-        return status === 'pending'
-      }).length ?? 0
-    if (memberCount + pendingCount >= ent.max_seats) {
+    const { members, pendingInvitations } = await loadMemberAndInviteCounts(
+      request,
+      orgId,
+    )
+    if (members.length + pendingInvitations.length >= ent.max_seats) {
       throw new ApiError(
         402,
-        `${workspace.plan} plan allows ${ent.max_seats} seat(s); you've used ${memberCount + pendingCount}. Upgrade to add more.`,
+        `${workspace.plan} plan allows ${ent.max_seats} seat(s); you've used ${members.length + pendingInvitations.length}. Upgrade to add more.`,
         'plan_seat_limit',
       )
     }

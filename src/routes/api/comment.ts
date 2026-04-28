@@ -3,11 +3,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { env } from '#/env'
 import {
   getTicket,
-  getWorkspaceByDomain,
   insertComment,
   makeDb,
 } from '#/db/client'
-import { domainFromHeader } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -16,6 +14,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
+import { getWorkspaceFromOrigin } from '#/lib/workspace-scope'
 import { CommentSchema } from '#/schema/comment'
 
 const postComment = withRequestMetrics('/api/comment', handleComment)
@@ -32,18 +31,11 @@ export const Route = createFileRoute('/api/comment')({
 async function handleComment(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
-    const domain = domainFromHeader(
-      request.headers.get('origin'),
-      request.headers.get('referer'),
-    )
-    if (!domain) throw new ApiError(400, 'bad origin', 'bad_origin')
-
     const body = CommentSchema.safeParse(await request.json().catch(() => null))
     if (!body.success) throw new ApiError(400, 'bad body', 'bad_body')
 
     const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
+    const workspace = await getWorkspaceFromOrigin(db, request)
     // Only claimed workspaces accept public comments — prevents a
     // pending workspace's future owner getting a flood of spam.
     if (workspace.state !== 'claimed') {

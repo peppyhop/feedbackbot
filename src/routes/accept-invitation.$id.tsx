@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, Mail } from 'lucide-react'
 
 import { Btn, LogoMark, Slab } from '#/components/ui/brut'
+import { requestMagicLink } from '#/lib/client-auth'
 import { seoMeta } from '#/lib/seo'
 
 export const Route = createFileRoute('/accept-invitation/$id')({
@@ -230,19 +231,10 @@ function SignInPrompt({
     setStage('sending')
     setError(null)
     try {
-      const res = await fetch('/api/auth/sign-in/magic-link', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          callbackURL: `/accept-invitation/${invitationId}`,
-        }),
+      await requestMagicLink({
+        email,
+        callbackURL: `/accept-invitation/${invitationId}`,
       })
-      if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(t || `HTTP ${res.status}`)
-      }
       setStage('sent')
     } catch (err) {
       setStage('error')

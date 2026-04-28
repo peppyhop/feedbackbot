@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { Btn, LogoMark, Slab } from '#/components/ui/brut'
 import { authClient } from '#/lib/auth-client'
+import { requestMagicLink } from '#/lib/client-auth'
 import { seoMeta } from '#/lib/seo'
 import { PLAN_LABEL, type PlanId } from '#/lib/billing/plans'
 import { loadLoginState } from '#/server/login-state'
@@ -95,24 +96,12 @@ function LoginPage() {
     setStage('sending')
     setError(null)
     try {
-      const res = await fetch('/api/auth/sign-in/magic-link', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          // Land back on /login after verify; the loader then routes
-          // them based on workspace state (claimed → /dashboard,
-          // incomplete → /onboard/{ws}, neither → /#pricing). Avoids
-          // dropping a freshly-signed-in user with no plan back on
-          // the marketing landing page where they have no next step.
-          callbackURL: '/login',
-        }),
-      })
-      if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(t || `HTTP ${res.status}`)
-      }
+      // Land back on /login after verify; the loader then routes
+      // them based on workspace state (claimed → /dashboard,
+      // incomplete → /onboard/{ws}, neither → /#pricing). Avoids
+      // dropping a freshly-signed-in user with no plan back on
+      // the marketing landing page where they have no next step.
+      await requestMagicLink({ email, callbackURL: '/login' })
       setStage('sent')
     } catch (err) {
       setStage('error')

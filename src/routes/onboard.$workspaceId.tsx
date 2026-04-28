@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 
 import { Btn, Chip, LogoMark, Slab } from '#/components/ui/brut'
+import { DnsRecordRow } from '#/components/ui/dns-record-row'
 import { seoMeta } from '#/lib/seo'
 
 const INSTALL_SNIPPET =
@@ -485,14 +486,14 @@ function VerifyDnsStep({
 
       {recordName && recordValue && (
         <div className="hi-card hi-card-raised" style={{ padding: 20 }}>
-          <Row
+          <DnsRecordRow
             label="name"
             value={recordName}
             copied={copied === 'name'}
             onCopy={() => onCopy('name', recordName)}
           />
           <div style={{ height: 10 }} />
-          <Row
+          <DnsRecordRow
             label="value"
             value={recordValue}
             copied={copied === 'value'}
@@ -533,67 +534,6 @@ function VerifyDnsStep({
       )}
       {verify.error && <ErrBox msg={(verify.error as Error).message} />}
     </>
-  )
-}
-
-function Row({
-  label,
-  value,
-  copied,
-  onCopy,
-}: {
-  label: string
-  value: string
-  copied: boolean
-  onCopy: () => void
-}) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '80px 1fr auto',
-        alignItems: 'center',
-        gap: 10,
-        border: '1.5px solid var(--border)',
-        padding: '8px 10px',
-        background: 'var(--surface)',
-      }}
-    >
-      <span
-        className="h-mono"
-        style={{
-          fontSize: 11,
-          color: 'var(--fg-faint)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </span>
-      <code
-        className="h-mono"
-        style={{
-          fontSize: 13,
-          color: 'var(--fg)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {value}
-      </code>
-      <Btn size="sm" variant="ghost" onClick={onCopy}>
-        {copied ? (
-          <>
-            <Check size={12} /> copied
-          </>
-        ) : (
-          <>
-            <Copy size={12} /> copy
-          </>
-        )}
-      </Btn>
-    </div>
   )
 }
 

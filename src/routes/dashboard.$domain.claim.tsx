@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Check, Copy } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 import { Btn, Chip, Slab } from '#/components/ui/brut'
+import { DnsRecordRow } from '#/components/ui/dns-record-row'
 import type { WorkspaceStateResponse } from '#/schema/claim'
 
 export const Route = createFileRoute('/dashboard/$domain/claim')({
@@ -134,14 +135,14 @@ function DnsCard({
         Add this TXT record at your DNS provider. Propagates usually within
         a minute; we verify via Cloudflare's DoH resolver.
       </p>
-      <RecordRow
+      <DnsRecordRow
         label="name"
         value={recordName}
         copied={copied === 'name'}
         onCopy={() => copy('name', recordName)}
       />
       <div style={{ height: 10 }} />
-      <RecordRow
+      <DnsRecordRow
         label="value"
         value={recordValue}
         copied={copied === 'value'}
@@ -170,67 +171,6 @@ function DnsCard({
           </span>
         )}
       </div>
-    </div>
-  )
-}
-
-function RecordRow({
-  label,
-  value,
-  copied,
-  onCopy,
-}: {
-  label: string
-  value: string
-  copied: boolean
-  onCopy: () => void
-}) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(60px, max-content) minmax(0, 1fr) auto',
-        alignItems: 'center',
-        gap: 10,
-        border: '1.5px solid var(--border)',
-        padding: '8px 10px',
-        background: 'var(--surface)',
-      }}
-    >
-      <span
-        className="h-mono"
-        style={{
-          fontSize: 11,
-          color: 'var(--fg-faint)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </span>
-      <code
-        className="h-mono"
-        style={{
-          fontSize: 13,
-          color: 'var(--fg)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {value}
-      </code>
-      <Btn size="sm" variant="ghost" onClick={onCopy}>
-        {copied ? (
-          <>
-            <Check size={12} /> copied
-          </>
-        ) : (
-          <>
-            <Copy size={12} /> copy
-          </>
-        )}
-      </Btn>
     </div>
   )
 }

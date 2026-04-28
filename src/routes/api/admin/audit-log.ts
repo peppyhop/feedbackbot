@@ -6,10 +6,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { desc, eq } from 'drizzle-orm'
 
-import { env } from '#/env'
-import { getWorkspaceByDomain, makeDb } from '#/db/client'
 import { auditLog } from '#/db/schema'
-import { normalizeDomain } from '#/lib/domain'
 import {
   ApiError,
   apiError,
@@ -18,7 +15,7 @@ import {
   optionsResponse,
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
-import { requireAdmin } from '#/lib/admin-auth'
+import { requireAdminWorkspace } from '#/lib/admin-auth'
 import { entitlementsFor } from '#/lib/billing/entitlements'
 
 function csvCell(v: unknown): string {
@@ -34,14 +31,8 @@ function csvCell(v: unknown): string {
 async function handle(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
+    const { workspace, db } = await requireAdminWorkspace(request)
     const url = new URL(request.url)
-    const domain = normalizeDomain(url.searchParams.get('domain'))
-    if (!domain) throw new ApiError(400, 'bad domain', 'bad_domain')
-
-    const db = makeDb(env.DB)
-    const workspace = await getWorkspaceByDomain(db, domain)
-    if (!workspace) throw new ApiError(404, 'no workspace', 'no_workspace')
-    await requireAdmin(request, workspace)
 
     // Tier gate.
     const ent = entitlementsFor(workspace.plan)
@@ -90,7 +81,7 @@ async function handle(request: Request): Promise<Response> {
         headers: {
           ...cors,
           'content-type': 'text/csv; charset=utf-8',
-          'content-disposition': `attachment; filename="audit-log-${domain}-${today}.csv"`,
+          'content-disposition': `attachment; filename="audit-log-${workspace.domain}-${today}.csv"`,
         },
       })
     }
