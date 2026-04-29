@@ -1,7 +1,18 @@
 // Transport layer for the widget. Single POST to /api/ticket +
 // optional two-step screenshot upload.
 
-const API_BASE = '__FB_API_BASE__' // replaced at build time
+// API base is the origin the widget script itself was loaded from —
+// captured by the bootstrap IIFE before this module runs and stashed
+// on the global so we don't have to thread it through every call.
+// Falls back to same-origin (empty string) for the dev-server case
+// where the widget is loaded into the dashboard origin directly.
+declare global {
+  interface Window {
+    __FEEDBACKBOT_ORIGIN__?: string
+  }
+}
+const API_BASE =
+  (typeof window !== 'undefined' && window.__FEEDBACKBOT_ORIGIN__) || ''
 
 export type SubmitInput = {
   message: string

@@ -204,3 +204,41 @@ original framing.
   `plan` column is stored on workspaces but nothing reads it yet —
   tier-based rate limits and feature gates are a follow-up once
   pricing is set.
+
+
+---
+
+## 2026-04-29 — Widget delivery: single-file IIFE, not module + manifest
+
+Rolled back the previous "ESM loader → manifest.json → hashed bundle"
+indirection. It had four cascading bugs (snippet pointed at
+`/widget.js` but build emitted `/widget/loader.js`; the loader was
+ESM but the snippet uses a classic `<script>` tag; Vite `define`
+substitution doesn't replace tokens inside string literals so the
+manifest URL was never baked; the fallback URL pointed at a domain
+we don't own).
+
+**Now**: `vite.widget.config.ts` emits one IIFE bundle straight to
+`public/widget.js`. No loader, no manifest, no per-deploy chunk
+hash coordination. The bundle is 26kB raw / 9.7kB gzipped (well
+under any feedback-widget budget).
+
+**html2canvas**: dynamic-imported from
+`https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm` at screenshot
+time. jsDelivr's `+esm` endpoint serves with permissive CORS, so
+the cross-origin module-import dance just works without us standing
+up our own CORS for `/widget/*`. Pinned to 1.4.1 so the browser
+caches it across customer sites.
+
+**Origin detection**: the IIFE captures `document.currentScript.src`
+synchronously at the top of its body (before `defer`'d execution
+returns control) and stashes the origin on
+`window.__FEEDBACKBOT_ORIGIN__`. `src/widget/api.ts` reads that
+back to construct API URLs — so the widget's API calls always go
+to the host the script was served from, regardless of which
+customer domain it's embedded on.
+
+**Trade-off accepted**: every bundle change invalidates the same
+URL (no content-hash cache busting). Acceptable for now — we set a
+short Cache-Control on `/widget.js` and a long one on the bundle
+contents only once we move to a CDN subdomain. That's deferred.

@@ -1,1 +1,0 @@
-import{t}from"./chunks/preload-helper.eW-blah3.js";var _="__FB_WIDGET_MANIFEST_URL__";(async()=>{try{const{entry:a}=await(await fetch(_,{cache:"no-cache"})).json();await t(()=>import(a),[])}catch(a){console.warn("feedbackbot: widget load failed",a)}})();

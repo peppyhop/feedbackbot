@@ -8,7 +8,6 @@
     "src/do/**/*.ts",
     "src/workers/**/*.ts",
     "src/widget/index.ts",
-    "src/widget/loader.ts",
     "scripts/**/*.ts"
   ],
 
@@ -21,7 +20,6 @@
   ],
 
   "ignorePatterns": [
-    "public/widget/**",
     "src/paraglide/**",
     "src/routeTree.gen.ts",
     "messages/**"

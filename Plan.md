@@ -280,8 +280,11 @@ POST   /api/admin/invite           Create org invitation
 ### 5.5 Widget & static
 
 ```
-GET    /widget.js                  Served from CDN with long cache + content hash
-GET    /widget/loader.js           Short-cache bootstrap that pulls hashed widget
+GET    /widget.js                  Single-file IIFE bundle. html2canvas
+                                   lazy-loads from a public CDN at
+                                   screenshot time so the main bundle
+                                   stays small without per-customer
+                                   CORS plumbing.
 ```
 
 All routes return JSON except the last two. Origin/Referer parsing happens in a shared middleware before per-route logic.
