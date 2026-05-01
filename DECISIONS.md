@@ -242,3 +242,165 @@ customer domain it's embedded on.
 URL (no content-hash cache busting). Acceptable for now — we set a
 short Cache-Control on `/widget.js` and a long one on the bundle
 contents only once we move to a CDN subdomain. That's deferred.
+
+---
+
+## 2026-04-29 — Anti-spam: Turnstile, not required email
+
+User asked whether the widget would attract spam now that
+`/api/ticket` is reachable, and named two options: Cloudflare
+Turnstile vs. requiring an email field.
+
+**Picked Turnstile**, declined required-email:
+- Required email contradicts the *zero-signup feedback* premise
+  and barely raises the bar (spammers can supply emails).
+- Turnstile is free, native to Workers, and invisible by default
+  for legit users (Cloudflare-managed challenge mode).
+
+**Deployment shape**:
+- `TURNSTILE_SECRET` is a server secret (`alchemy.optionalSecret`).
+  Unset → `/api/ticket` bypasses the gate (graceful mode, same
+  pattern as Dodo). Set → every submission must carry a fresh
+  token; server siteverifies via
+  `https://challenges.cloudflare.com/turnstile/v0/siteverify` BEFORE
+  the per-IP DO rate-limit so failed tokens don't burn DO units.
+- `VITE_FB_TURNSTILE_SITEKEY` is a public site key baked into
+  `public/widget.js` at build time via Vite `define`. Empty string
+  disables the client-side mint (`TURNSTILE_ENABLED = false`); the
+  Turnstile script is never lazy-loaded in graceful mode, so the
+  widget makes one fewer network request when Turnstile is off.
+- Tokens are minted **per submit** (not per panel-open) — avoids
+  the 5-min token-expiry edge case at the cost of one extra
+  challenge per submission. Cloudflare's invisible mode resolves
+  in <100ms for legit users.
+- Both knobs default OFF — turning them ON is a single env-var
+  flip per stage, no code change.
+
+**Layered defense** (existing, retained):
+1. Origin/Referer required → registrable domain (`src/lib/domain.ts`)
+2. Origin domain blocklist (freemail / disposable, KV-backed)
+3. Honeypot (silent fake-success on non-empty)
+4. **Turnstile (this change)**
+5. Per-IP DO sliding window (20/hr)
+6. Per-workspace DO hourly + monthly + pending caps (plan-aware)
+
+**Trade-off accepted**: Turnstile tokens are single-use; if we ever
+add an internal POST-retry to `/api/ticket` we'd hit
+`timeout-or-duplicate` on the second siteverify. Today nothing
+retries — `verifyTurnstile()` carries a doc comment to flag it for
+future readers.
+
+**Out of scope**: email-address blocklist, hCaptcha (we're on CF —
+Turnstile is the obvious choice), tightening pending-workspace
+auto-creation. All deferred until production data shows we still
+have noise.
+
+---
+
+## 2026-04-29 — Turnstile hostname-add tied to DNS verification
+
+Cloudflare's Turnstile dashboard requires a non-empty hostname
+allowlist; the widget runs cross-origin on customer sites
+(peppyhop.com etc.), and a challenge served on a hostname not in
+the allowlist returns `hostname-mismatch`. Without auto-management
+the widget would only work on `usefeedbackbot.com`.
+
+**Picked**: PATCH the widget's `domains` array via the Cloudflare
+API every time a customer's DNS verification succeeds. The
+verification endpoint already proves the customer controls the
+domain — same trust we'd give a manual dashboard add. Helper at
+`src/lib/turnstile-admin.ts`, hook in
+`src/routes/api/verify-domain.ts:62`.
+
+**Auth**: a Cloudflare API token scoped only to "Account >
+Turnstile > Edit". Stored as `CF_API_TOKEN`; `CF_ACCOUNT_ID` and
+`CF_TURNSTILE_WIDGET_ID` (= the public site key) are non-secret
+env vars.
+
+**Concurrency**: GET-then-PATCH is read-then-merge, not a CAS.
+Two concurrent verifies on different domains could race and lose
+one entry. Self-healing: the next verify on either domain reads
+the current list and re-adds anything missing. Acceptable — the
+verify endpoint is rare per-domain and the failure mode is just
+"widget 403s for a few minutes until next verify in the system".
+
+**Failure handling**: helper logs and returns false on any
+failure; `verify-domain` continues to claim the workspace. We
+don't want a transient CF API outage to block onboarding. Operator
+visibility comes from the warning log
+(`turnstile hostname add failed`).
+
+**Trade-off accepted**: Cloudflare's per-widget hostname cap is
+finite (currently 1000). At that scale we'd need to either rotate
+to a second widget or move to a different anti-bot scheme. Not a
+near-term concern; flagged here so future-us doesn't get
+surprised.
+
+**Onboarding sequence is now**:
+  1. Pay → claim workspace (org + verification token)
+  2. Enter domain, add DNS TXT
+  3. Click "Verify" → DNS resolves → workspace claimed →
+     **CF widget hostnames PATCHed (this change)**
+  4. Install snippet → widget mints Turnstile tokens that
+     siteverify with the correct hostname
+
+---
+
+## 2026-04-29 — Turnstile token-hostname rebind (security fix)
+
+While reviewing the auto-add-hostname design we found a real
+loophole: `verifyTurnstile` was throwing away the `hostname`
+field of the siteverify response, so a paying customer could mint
+a real Turnstile token from their own verified domain
+(`evil.com`), then replay it against `/api/ticket` with a forged
+`Origin: peppyhop.com` header to inject spam tickets into another
+customer's workspace.
+
+This works because every verified customer's domain ends up on
+the same Cloudflare allowlist (per the auto-add design), so
+Cloudflare itself can't reject the cross-customer replay — it's
+on us to bind the token to its origin.
+
+**Fix**: `verifyTurnstile` returns `{ ok: true, hostname: string }`
+on success. The `/api/ticket` handler runs
+`sameRegistrableDomain(verify.hostname, origin_domain)` and 403s
+on mismatch (`turnstile_hostname_mismatch`). Subdomains share a
+registrable domain, so a token minted on `peppyhop.com` is valid
+for requests Origined from `app.peppyhop.com` (and vice versa).
+
+**Other findings flagged but deferred**:
+- `/api/comment` and `/api/vote` are also widget-callable but
+  don't run the Turnstile gate. Lower-stakes (comment-on-ticket,
+  vote-toggle), but worth a follow-up to copy the pattern.
+- Auto-create pending workspaces on first `/api/ticket` ingestion
+  predates this PR. With Turnstile on, a hostname-mismatch reject
+  happens before any DB write, so pending-workspace abuse via
+  this path is no longer a concern.
+- Long-tail churn (a customer's verified domain gets bought by a
+  spammer after the company shuts down) leaves the hostname on
+  the CF allowlist permanently. Mitigation = periodic re-verify;
+  out of scope.
+
+---
+
+## 2026-05-01 — Turnstile site key: one env var, two contexts
+
+User flagged duplication: we had `VITE_FB_TURNSTILE_SITEKEY`
+(build-time, baked into widget.js) AND `CF_TURNSTILE_WIDGET_ID`
+(runtime, used by the admin PATCH against Cloudflare's API). Both
+hold the same string — Cloudflare's Turnstile API addresses the
+widget by its site key, so "site key" and "widget id" are
+literally the same value. Two names = two places to forget to
+update.
+
+**Collapsed to a single env var: `CF_TURNSTILE_WIDGET_ID`.** Vite
+`define` doesn't require the `VITE_` prefix (it's a Vite
+*convention* for client-exposed vars, not an enforced rule).
+`vite.widget.config.ts` now reads `process.env.CF_TURNSTILE_WIDGET_ID`
+at build time, and the worker reads `env.CF_TURNSTILE_WIDGET_ID`
+at runtime. Same string, one source of truth.
+
+We don't have varlock or a similar schema validator wired up here
+(despite a passing impression we did) — would be the right next
+step if env-var hygiene becomes a recurring theme. Today's
+defense is just keeping the var count low.

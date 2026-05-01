@@ -11,6 +11,10 @@ export const TicketSubmitSchema = z.object({
   honeypot: z.string().max(0).optional().or(z.literal('')),
   // caller flags screenshot upload in step 2 so we hand back a pre-signed URL
   want_screenshot_upload: z.boolean().optional(),
+  // Cloudflare Turnstile token. Optional in the schema so local
+  // dev (TURNSTILE_SECRET unset) keeps working; the route handler
+  // requires it whenever the secret is configured.
+  turnstile_token: z.string().max(2048).optional().or(z.literal('')),
 })
 export type TicketSubmit = z.infer<typeof TicketSubmitSchema>
 

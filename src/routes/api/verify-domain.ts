@@ -23,6 +23,7 @@ import { withRequestMetrics } from '#/lib/analytics'
 import { VerifyDomainSchema, type VerifyDomainResponse } from '#/schema/claim'
 import { auth } from '#/lib/auth'
 import { requireSession } from '#/lib/admin-auth'
+import { addTurnstileHostname } from '#/lib/turnstile-admin'
 
 const postVerify = withRequestMetrics('/api/verify-domain', handle)
 
@@ -58,6 +59,19 @@ async function handle(request: Request): Promise<Response> {
     }
 
     if (!check.verified) return json(response, { headers: cors })
+
+    // DNS verified — register the domain with Cloudflare Turnstile
+    // so the widget can mint tokens cross-origin from the
+    // customer's site. Awaited (not fire-and-forget) because Worker
+    // pending promises are cancelled at response time without
+    // waitUntil. Adds ~2 round-trips of latency to a once-per-
+    // workspace call; helper logs and returns false on failure so
+    // verification still completes — the widget will 403 from this
+    // hostname until reconciled.
+    const turnstileOk = await addTurnstileHostname(domain, env)
+    if (!turnstileOk) {
+      console.warn('turnstile hostname add failed', { domain })
+    }
 
     // DNS verified — transition workspace to claimed. First caller
     // wins owner; subsequent claim-attempts via email-match add

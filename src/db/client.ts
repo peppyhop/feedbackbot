@@ -223,7 +223,7 @@ export async function insertVote(
   db: DB,
   workspaceId: string,
   ticketId: string,
-  fingerprint: string,
+  voterUserId: string,
 ): Promise<{ inserted: boolean; upvotes: number }> {
   const now = Date.now()
   try {
@@ -231,11 +231,11 @@ export async function insertVote(
       id: newId.vote(),
       ticketId,
       workspaceId,
-      fingerprint,
+      voterUserId,
       createdAt: now,
     })
   } catch (e) {
-    // UNIQUE(ticket_id, fingerprint) — already voted.
+    // UNIQUE(ticket_id, voter_user_id) — already voted.
     const row = await db
       .select({ upvotes: tickets.upvotes })
       .from(tickets)

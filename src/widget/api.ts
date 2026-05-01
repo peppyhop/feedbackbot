@@ -21,6 +21,7 @@ export type SubmitInput = {
   email?: string
   kind?: 'auto' | 'bug' | 'idea' | 'ask'
   screenshotDataUrl?: string
+  turnstileToken?: string
 }
 
 export type SubmitResult =
@@ -35,6 +36,7 @@ export async function submitTicket(input: SubmitInput): Promise<SubmitResult> {
     email: input.email ?? '',
     honeypot: '',
     want_screenshot_upload: !!input.screenshotDataUrl,
+    turnstile_token: input.turnstileToken ?? '',
   }
   try {
     const res = await fetch(`${API_BASE}/api/ticket`, {

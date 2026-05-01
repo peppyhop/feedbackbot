@@ -1,7 +1,8 @@
 /** @jsxImportSource preact */
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 import { fetchWidgetConfig, submitTicket } from './api'
+import { mintTurnstileToken, TURNSTILE_ENABLED } from './turnstile'
 
 type Step = 'compose' | 'sending' | 'sent'
 type Kind = 'auto' | 'bug' | 'idea' | 'ask'
@@ -45,6 +46,8 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
     setErrorMessage(null)
   }
 
+  const turnstileRef = useRef<HTMLDivElement>(null)
+
   const send = async () => {
     setStep('sending')
     setErrorMessage(null)
@@ -53,6 +56,13 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
       const { captureScreenshot } = await import('./screenshot')
       screenshotDataUrl = (await captureScreenshot()) ?? undefined
     }
+    // Mint a Turnstile token if enabled. Tokens are single-use and
+    // expire in ~5 min — minting per submit keeps it simple. When
+    // disabled (no site key baked), this resolves to '' instantly.
+    let turnstileToken = ''
+    if (TURNSTILE_ENABLED && turnstileRef.current) {
+      turnstileToken = await mintTurnstileToken(turnstileRef.current)
+    }
     const result = await submitTicket({
       message: msg,
       pageUrl: window.location.href,
@@ -60,18 +70,20 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
       email: email || undefined,
       kind,
       screenshotDataUrl,
+      turnstileToken,
     })
     if (result.ok) {
       setStep('sent')
     } else {
-      // Surface inline on the compose step so the user can fix-up
-      // and retry without losing what they typed. (Was setting
-      // step → 'sent' here, which trapped them on a success
-      // screen with an error message and the only way back was
-      // a button that wiped the textarea.)
+      // Surface the error inline on the compose step so the user
+      // can fix-up + retry without losing what they typed. (Was
+      // `setStep('sent')` here, which trapped the user on a
+      // success screen with an error message and no way back.)
       setErrorMessage(
         result.status === 429
           ? 'Too many submissions — try again in a minute.'
+          : result.status === 403
+          ? "Couldn't verify — please refresh and try again."
           : 'Could not send. Try again.',
       )
       setStep('compose')
@@ -82,6 +94,13 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
 
   return (
     <div class={`wrap ${themeClass}`}>
+      {/* Invisible Turnstile mount point. Lives outside the panel
+          so it survives panel open/close cycles. */}
+      <div
+        ref={turnstileRef}
+        style="position:absolute;width:0;height:0;overflow:hidden;"
+        aria-hidden
+      />
       <div class="stack">
         {open && (
           <div class="panel">

@@ -91,10 +91,10 @@ export const votes = sqliteTable(
     workspaceId: text('workspace_id')
       .notNull()
       .references(() => workspaces.id),
-    fingerprint: text('fingerprint').notNull(),
+    voterUserId: text('voter_user_id').notNull(),
     createdAt: integer('created_at').notNull(),
   },
-  (t) => [uniqueIndex('votes_ticket_fp_uq').on(t.ticketId, t.fingerprint)],
+  (t) => [uniqueIndex('votes_ticket_user_uq').on(t.ticketId, t.voterUserId)],
 )
 
 export const integrations = sqliteTable('integrations', {

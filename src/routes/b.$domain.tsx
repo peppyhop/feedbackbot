@@ -81,6 +81,13 @@ function BoardPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ticket_id: ticketId }),
       })
+      // Voting requires a session — bounce unauthenticated users
+      // through the magic-link flow and bring them back here.
+      if (res.status === 401) {
+        const next = `/b/${domain}`
+        window.location.href = `/login?callbackURL=${encodeURIComponent(next)}`
+        throw new Error('auth_required')
+      }
       if (!res.ok) throw new Error(`vote failed: ${res.status}`)
       return res.json() as Promise<{ upvotes: number; voted: boolean }>
     },

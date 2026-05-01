@@ -56,6 +56,13 @@ jobs:
       # DODO_PAYMENTS_API_KEY (which is the LIVE key on prod) so the
       # test suite never touches live billing.
       DODO_TEST_API_KEY: ${{ secrets.DODO_TEST_API_KEY }}
+      # Cloudflare Turnstile — anti-spam gate on /api/ticket plus
+      # auto-add of customer hostnames on DNS verification. Both
+      # default OFF in graceful mode, so unset is fine.
+      TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+      CF_TURNSTILE_WIDGET_ID: ${{ vars.CF_TURNSTILE_WIDGET_ID }}
     steps:
       - uses: actions/checkout@v4
 

@@ -35,6 +35,13 @@ jobs:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
       SLACK_CLIENT_SECRET: ${{ secrets.SLACK_CLIENT_SECRET }}
+      # Cloudflare Turnstile — anti-spam gate on /api/ticket plus
+      # auto-add of customer hostnames on DNS verification. Both
+      # default OFF in graceful mode, so unset is fine.
+      TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+      CF_TURNSTILE_WIDGET_ID: ${{ vars.CF_TURNSTILE_WIDGET_ID }}
     steps:
       - uses: actions/checkout@v4
 

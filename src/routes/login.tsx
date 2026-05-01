@@ -10,17 +10,35 @@ import { loadLoginState } from '#/server/login-state'
 
 const PLAN_INTENT_KEY = 'fb:intended_plan'
 
+// Only allow same-origin path callbacks. Reject absolute URLs and
+// protocol-relative `//evil.com` to prevent open-redirect abuse.
+function safeCallbackURL(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  if (!raw.startsWith('/') || raw.startsWith('//')) return undefined
+  return raw
+}
+
 export const Route = createFileRoute('/login')({
   component: LoginPage,
   validateSearch: (raw: Record<string, unknown>) => ({
     plan: typeof raw.plan === 'string' ? (raw.plan as string) : undefined,
+    callbackURL: safeCallbackURL(raw.callbackURL),
   }),
   // Loader runs server-side on first hit and on every client nav.
   // It collapses the previous two useEffect probes (auth-state +
   // workspace lookup) into one server round-trip and short-circuits
   // signed-in users with a claimed workspace before we render.
-  loader: async () => {
+  loaderDeps: ({ search }) => ({ callbackURL: search.callbackURL }),
+  loader: async ({ deps }) => {
     const state = await loadLoginState()
+    // Honor an explicit callbackURL when the visitor is already
+    // signed in (e.g. they clicked "Vote" on a public board, hit
+    // /login while still authenticated, and we want to bounce
+    // them straight back). Validated in validateSearch — only
+    // same-origin paths reach here.
+    if (state.signed_in && deps.callbackURL) {
+      throw redirect({ to: deps.callbackURL })
+    }
     // Signed-in user with a claimed workspace → straight to dashboard.
     if (state.signed_in && state.claimed_workspace_domain) {
       throw redirect({
@@ -96,12 +114,16 @@ function LoginPage() {
     setStage('sending')
     setError(null)
     try {
-      // Land back on /login after verify; the loader then routes
-      // them based on workspace state (claimed → /dashboard,
-      // incomplete → /onboard/{ws}, neither → /#pricing). Avoids
-      // dropping a freshly-signed-in user with no plan back on
-      // the marketing landing page where they have no next step.
-      await requestMagicLink({ email, callbackURL: '/login' })
+      // Default: land back on /login after verify; the loader
+      // routes based on workspace state (claimed → /dashboard,
+      // incomplete → /onboard/{ws}, neither → /#pricing). When a
+      // ?callbackURL= param is present (e.g. a vote/comment 401
+      // redirect from a public board), we pass it through so the
+      // visitor is bounced straight back to where they were.
+      await requestMagicLink({
+        email,
+        callbackURL: search.callbackURL ?? '/login',
+      })
       setStage('sent')
     } catch (err) {
       setStage('error')
@@ -274,11 +296,11 @@ function LoginPage() {
                   // Better Auth's social sign-in endpoint is POST-only;
                   // the SDK wraps the redirect dance for us. Same
                   // callbackURL trick as magic-link: re-enter /login
-                  // so its loader routes the user to the right place
-                  // based on workspace state.
+                  // (or the explicit callbackURL when present) so
+                  // its loader routes the user to the right place.
                   authClient.signIn.social({
                     provider: 'google',
-                    callbackURL: '/login',
+                    callbackURL: search.callbackURL ?? '/login',
                   })
                 }}
               >

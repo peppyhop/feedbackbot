@@ -15,6 +15,7 @@ import {
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
 import { getWorkspaceFromOrigin } from '#/lib/workspace-scope'
+import { requireSession } from '#/lib/admin-auth'
 import { CommentSchema } from '#/schema/comment'
 
 const postComment = withRequestMetrics('/api/comment', handleComment)
@@ -28,9 +29,15 @@ export const Route = createFileRoute('/api/comment')({
   },
 })
 
+// Public commenting requires a Better Auth session — same
+// reasoning as voting (DECISIONS.md 2026-04-29). Anon comments
+// would be a spam vector with no upside; by the time someone
+// wants to comment they've already invested enough to sign in.
 async function handleComment(request: Request): Promise<Response> {
   const cors = corsHeadersFor(request)
   try {
+    const { userId } = await requireSession(request)
+
     const body = CommentSchema.safeParse(await request.json().catch(() => null))
     if (!body.success) throw new ApiError(400, 'bad body', 'bad_body')
 
@@ -49,6 +56,7 @@ async function handleComment(request: Request): Promise<Response> {
       workspaceId: workspace.id,
       ticketId: ticket.id,
       message: body.data.message,
+      authorUserId: userId,
       authorName: body.data.author_name ?? null,
       source: 'web',
     })
