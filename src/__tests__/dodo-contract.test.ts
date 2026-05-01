@@ -68,7 +68,7 @@ describeContract('Dodo Payments — test-mode contract', () => {
         product_cart: [{ product_id: TEST_PRODUCT_ID_LITE, quantity: 1 }],
         metadata: { source: 'feedbackbot-contract-test' },
         return_url:
-          'https://usefeedbackbot.com/dashboard/billing/success?cs={CHECKOUT_SESSION_ID}',
+          'https://usefeedbackbot.com/dashboard/billing/success',
       })) as unknown as {
         checkout_url?: string
         payment_link?: string

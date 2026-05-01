@@ -71,29 +71,31 @@ describe('pay-first happy path (scripted e2e)', () => {
     )
     const startCall = mocks.dodoCreate.mock.calls[0][0]
     expect(startCall.return_url).toBe(
-      'https://usefeedbackbot.com/dashboard/billing/success?cs={CHECKOUT_SESSION_ID}',
+      'https://usefeedbackbot.com/dashboard/billing/success',
     )
 
     // 2. (Dodo collects email + payment in the hosted UI; we can't
     //    drive that in a test. Simulate by calling completeCheckout
-    //    directly with a stub Dodo client returning a paid session.)
+    //    directly with a stub Dodo client returning a paid
+    //    subscription — Dodo redirects with ?subscription_id=…
+    //    and we re-fetch the subscription server-side.)
     const dodoStub: DodoClient = {
-      checkoutSessions: {
+      subscriptions: {
         retrieve: vi.fn(async () => ({
-          payment_status: 'succeeded',
+          status: 'active',
           customer: {
             customer_id: 'cust_happy',
             email: 'happy@example.com',
           },
           subscription_id: 'sub_happy',
-          product_cart: [{ product_id: TEST_PRODUCT_ID_LITE }],
+          product_id: TEST_PRODUCT_ID_LITE,
           metadata: { slug: 'feedbackbot-lite', plan: 'lite' },
           next_billing_date: '2026-05-28T08:00:00.000Z',
         })),
       },
     }
     const successResult = await runCompleteCheckout({
-      data: { cs: 'cs_happy_path' },
+      data: { subscription_id: 'sub_happy' },
       env: makeTestEnv({
         DODO_PAYMENTS_API_KEY: 'test_dodo_key',
         BETTER_AUTH_URL: 'https://usefeedbackbot.com',
@@ -135,7 +137,7 @@ describe('pay-first happy path (scripted e2e)', () => {
     //    session id (e.g., a refresh) MUST NOT create another user
     //    or workspace.
     const second = await runCompleteCheckout({
-      data: { cs: 'cs_happy_path' },
+      data: { subscription_id: 'sub_happy' },
       env: makeTestEnv({
         DODO_PAYMENTS_API_KEY: 'test_dodo_key',
         BETTER_AUTH_URL: 'https://usefeedbackbot.com',

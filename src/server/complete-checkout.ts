@@ -33,13 +33,12 @@ const magicLinkToken = customAlphabet(
 
 const MAGIC_LINK_TTL_MS = 5 * 60 * 1000
 
-type DodoCheckoutSession = {
-  payment_status?: string | null
+type DodoSubscription = {
   status?: string | null
   customer?: { email?: string | null; customer_id?: string | null } | null
   customer_email?: string | null
   subscription_id?: string | null
-  product_cart?: Array<{ product_id?: string }>
+  product_id?: string | null
   metadata?: Record<string, unknown> | null
   next_billing_date?: string | null
 }
@@ -53,13 +52,17 @@ export type CompleteCheckoutResult =
     }
 
 const InputSchema = z.object({
-  cs: z.string().min(1),
+  subscription_id: z.string().min(1),
+  // Dodo also appends ?email= but we don't trust it — we re-read the
+  // email from the verified subscription object below.
+  email: z.string().optional(),
+  status: z.string().optional(),
 })
 
 // Subset of the DodoPayments client we actually call. Lets tests
 // inject a stub without depending on the real SDK shape.
 export type DodoClient = {
-  checkoutSessions: {
+  subscriptions: {
     retrieve(id: string): Promise<unknown>
   }
 }
@@ -68,26 +71,28 @@ export type DodoClient = {
 // with stubbed deps (env / db / dodo). The wrapper below plumbs in
 // the real ones — env binding, makeDb(env.DB), real DodoPayments.
 export async function runCompleteCheckout(opts: {
-  data: { cs: string }
+  data: { subscription_id: string; email?: string; status?: string }
   env: Pick<Env, 'BETTER_AUTH_URL' | 'DODO_PAYMENTS_API_KEY' | 'DODO_PAYMENTS_ENV'>
   db: DB
   dodo: DodoClient
 }): Promise<CompleteCheckoutResult> {
-  const cs = opts.data.cs
+  const subscriptionId = opts.data.subscription_id
 
   if (!opts.env.DODO_PAYMENTS_API_KEY) {
     return { kind: 'redirect', url: '/' }
   }
 
-  const session = (await opts.dodo.checkoutSessions.retrieve(
-    cs,
-  )) as unknown as DodoCheckoutSession
+  // Verify the subscription via Dodo's API. Doing this server-side
+  // is the trust anchor: we don't believe ?status=active or ?email=
+  // from the redirect URL on its own (those can be forged) — the
+  // API call confirms the subscription exists, is on our account,
+  // and yields the canonical email + product.
+  const subscription = (await opts.dodo.subscriptions.retrieve(
+    subscriptionId,
+  )) as unknown as DodoSubscription
 
-  const status = session.payment_status ?? session.status ?? ''
+  const status = subscription.status ?? ''
   if (status && status !== 'active' && status !== 'succeeded') {
-    // Payment failed — there's no workspace to send them to. Land
-    // on the homepage pricing section with a query param so future
-    // UI can pick it up.
     return {
       kind: 'redirect',
       url: `/?failed=${encodeURIComponent(status)}#pricing`,
@@ -95,41 +100,46 @@ export async function runCompleteCheckout(opts: {
   }
 
   const email =
-    session.customer?.email?.toLowerCase() ??
-    session.customer_email?.toLowerCase() ??
+    subscription.customer?.email?.toLowerCase() ??
+    subscription.customer_email?.toLowerCase() ??
     null
-  const subscriptionId = session.subscription_id ?? null
-  if (!email || !subscriptionId) {
-    // Dodo paid us but didn't return the fields we need to attribute
-    // it. Fall back to the homepage; the webhook will fire and the
-    // user can sign in via magic-link to recover.
+  if (!email) {
+    // Subscription verified but missing email — bail to homepage,
+    // the webhook will retry on its own.
     return { kind: 'redirect', url: '/' }
   }
 
-  const metadata = session.metadata ?? {}
+  const metadata = subscription.metadata ?? {}
   const metaSlug =
     typeof metadata.slug === 'string' && metadata.slug
       ? metadata.slug
       : null
-  const productId = session.product_cart?.[0]?.product_id ?? null
+  const productId = subscription.product_id ?? null
   const fallbackSlug = productId ? PRODUCT_ID_TO_SLUG[productId] : null
   const plan: PlanId = planFromSlug(metaSlug ?? fallbackSlug)
   const customerId =
-    session.customer && typeof session.customer === 'object'
-      ? (session.customer.customer_id ?? null)
+    subscription.customer && typeof subscription.customer === 'object'
+      ? (subscription.customer.customer_id ?? null)
       : null
   const nextBillingDate =
-    typeof session.next_billing_date === 'string'
-      ? Date.parse(session.next_billing_date)
+    typeof subscription.next_billing_date === 'string'
+      ? Date.parse(subscription.next_billing_date)
       : null
   const currentPeriodEnd = Number.isFinite(nextBillingDate)
     ? (nextBillingDate as number)
     : null
 
+  // Prefer the subscription_id from the verified API response over
+  // the URL param: the URL is user-controllable, the API response
+  // is the authoritative identity. They should match in practice
+  // (the SDK call IS keyed by the URL's id), but if they ever
+  // disagree the verified one wins.
+  const verifiedSubscriptionId = subscription.subscription_id ?? subscriptionId
+
   const { workspaceId } = await upsertPaidWorkspace(opts.db, {
     email,
     plan,
-    subscriptionId,
+    subscriptionId: verifiedSubscriptionId,
     customerId,
     currentPeriodEnd,
   })
