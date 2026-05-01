@@ -57,10 +57,12 @@ export async function handle(request: Request): Promise<Response> {
       env.BETTER_AUTH_URL && env.BETTER_AUTH_URL.length > 0
         ? env.BETTER_AUTH_URL
         : url.origin
-    // Dodo replaces {CHECKOUT_SESSION_ID} in the return_url with the
-    // actual session id, so the success handler can call
-    // `checkoutSessions.retrieve(cs)` and trust the verified email.
-    const returnUrl = `${baseUrl}/dashboard/billing/success?cs={CHECKOUT_SESSION_ID}`
+    // Dodo appends `subscription_id`, `status`, and `email` as query
+    // params on its own — we don't pass any placeholder for the
+    // session id (Dodo doesn't substitute templates). The success
+    // handler reads `subscription_id`, fetches it via the API for
+    // verification, and trusts the resulting customer email.
+    const returnUrl = `${baseUrl}/dashboard/billing/success`
 
     const resp = await dodo.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],

@@ -85,7 +85,7 @@ describe('GET /api/checkout/start', () => {
     // Return URL must contain Dodo's substitution placeholder so we
     // can call retrieve(cs) on the success page.
     expect(arg.return_url).toBe(
-      'https://usefeedbackbot.com/dashboard/billing/success?cs={CHECKOUT_SESSION_ID}',
+      'https://usefeedbackbot.com/dashboard/billing/success',
     )
   })
 
@@ -120,7 +120,7 @@ describe('GET /api/checkout/start', () => {
 
     const arg = mocks.dodoCreate.mock.calls[0][0]
     expect(arg.return_url).toBe(
-      'https://pr-99.preview.usefeedbackbot.com/dashboard/billing/success?cs={CHECKOUT_SESSION_ID}',
+      'https://pr-99.preview.usefeedbackbot.com/dashboard/billing/success',
     )
   })
 
