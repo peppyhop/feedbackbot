@@ -47,15 +47,25 @@ export function getClientIp(request: Request): string {
 // third-party origins — that's the whole point. We don't gate by
 // allowlist here; the Origin header is parsed + used to derive the
 // workspace, and invalid Origins are rejected.
+//
+// `Allow-Credentials: true` only when an Origin is present.
+// Browsers reject `Allow-Origin: *` paired with `Allow-Credentials:
+// true`, so when we fall back to the wildcard we must also drop
+// the credentials flag. Without this, any cross-origin fetch with
+// `credentials: 'include'` would fail preflight and surface as a
+// generic network error to the widget ("Could not send. Try
+// again.").
 export function corsHeadersFor(request: Request): Record<string, string> {
-  const origin = request.headers.get('origin') ?? '*'
-  return {
-    'access-control-allow-origin': origin,
+  const origin = request.headers.get('origin')
+  const headers: Record<string, string> = {
+    'access-control-allow-origin': origin ?? '*',
     'access-control-allow-methods': 'POST, GET, OPTIONS',
     'access-control-allow-headers': 'content-type',
     'access-control-max-age': '86400',
     vary: 'origin',
   }
+  if (origin) headers['access-control-allow-credentials'] = 'true'
+  return headers
 }
 
 export function optionsResponse(request: Request): Response {

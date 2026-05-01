@@ -39,7 +39,6 @@ export async function submitTicket(input: SubmitInput): Promise<SubmitResult> {
   try {
     const res = await fetch(`${API_BASE}/api/ticket`, {
       method: 'POST',
-      credentials: 'include',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     })
@@ -84,9 +83,7 @@ export async function fetchWidgetConfig(): Promise<WidgetConfig> {
   // (offline, CORS, etc.), we keep the watermark visible — that's the
   // safe default.
   try {
-    const res = await fetch(`${API_BASE}/api/widget-config`, {
-      credentials: 'include',
-    })
+    const res = await fetch(`${API_BASE}/api/widget-config`)
     if (!res.ok) return { plan: null, remove_branding: false }
     return (await res.json()) as WidgetConfig
   } catch {

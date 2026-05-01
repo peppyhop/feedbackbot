@@ -64,12 +64,17 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
     if (result.ok) {
       setStep('sent')
     } else {
+      // Surface inline on the compose step so the user can fix-up
+      // and retry without losing what they typed. (Was setting
+      // step → 'sent' here, which trapped them on a success
+      // screen with an error message and the only way back was
+      // a button that wiped the textarea.)
       setErrorMessage(
         result.status === 429
           ? 'Too many submissions — try again in a minute.'
           : 'Could not send. Try again.',
       )
-      setStep('sent')
+      setStep('compose')
     }
   }
 
@@ -148,6 +153,12 @@ export function Widget(props: { onClose?: () => void; theme?: 'light' | 'dark' }
                     placeholder="optional@email.com"
                   />
                 </div>
+
+                {errorMessage && (
+                  <div class="err" role="alert">
+                    {errorMessage}
+                  </div>
+                )}
 
                 <div class="foot">
                   {removeBranding ? (

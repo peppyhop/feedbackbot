@@ -30,3 +30,4 @@ todos.json
 
 # IDE
 .vscode/
+.claude/
