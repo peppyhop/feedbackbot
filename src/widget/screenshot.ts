@@ -12,6 +12,15 @@ type Html2CanvasFn = (
   opts: { logging?: boolean; useCORS?: boolean; scale?: number },
 ) => Promise<HTMLCanvasElement>
 
+// Hard ceiling on screenshot capture. html2canvas can hang on
+// pages with cross-origin images or heavy DOMs (shopping sites
+// with hundreds of product cards are common offenders). Without
+// a timeout, send() blocks forever and the widget shows
+// "routing…" with no recourse. 8s is a generous budget for any
+// realistic page; past that we drop the screenshot and let the
+// ticket through without it.
+const CAPTURE_TIMEOUT_MS = 8000
+
 export async function captureScreenshot(): Promise<string | null> {
   try {
     const mod = (await import(/* @vite-ignore */ HTML2CANVAS_CDN)) as {
@@ -19,12 +28,19 @@ export async function captureScreenshot(): Promise<string | null> {
     }
     const html2canvas = mod.default
     if (!html2canvas) throw new Error('html2canvas: missing default export')
-    const canvas = await html2canvas(document.body, {
+    const capture = html2canvas(document.body, {
       logging: false,
       useCORS: true,
       scale: Math.min(window.devicePixelRatio || 1, 2),
-    })
-    return canvas.toDataURL('image/png')
+    }).then((canvas) => canvas.toDataURL('image/png'))
+    const timeout = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), CAPTURE_TIMEOUT_MS),
+    )
+    const result = await Promise.race([capture, timeout])
+    if (result === null) {
+      console.warn('feedbackbot: screenshot capture timed out')
+    }
+    return result
   } catch (err) {
     console.warn('screenshot capture failed', err)
     return null

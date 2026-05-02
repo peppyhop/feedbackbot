@@ -58,9 +58,19 @@ function loadScript(): Promise<TurnstileApi> {
   return scriptPromise
 }
 
+// Hard ceiling on how long we'll wait for a Turnstile token.
+// Cloudflare's invisible challenge usually returns in <100ms;
+// if it's still pending after this we give up and let the server
+// respond with whatever its current gate behavior is. Without
+// this timeout, a misconfigured hostname (not on the allowlist)
+// silently hangs the iframe and the widget shows an infinite
+// "routing" spinner.
+const MINT_TIMEOUT_MS = 5000
+
 // Mint a fresh token. Resolves to empty string on any failure
-// (including graceful mode) — caller should still try to submit;
-// the server will reject if TURNSTILE_SECRET is set.
+// (including graceful mode and timeout) — caller should still
+// try to submit; the server will reject if TURNSTILE_SECRET is
+// set, and the widget will surface that as an inline error.
 export async function mintTurnstileToken(
   container: HTMLElement,
 ): Promise<string> {
@@ -68,6 +78,20 @@ export async function mintTurnstileToken(
   try {
     const turnstile = await loadScript()
     return await new Promise<string>((resolve) => {
+      let settled = false
+      const timer = setTimeout(() => {
+        if (settled) return
+        settled = true
+        console.warn('feedbackbot: turnstile mint timed out')
+        resolve('')
+      }, MINT_TIMEOUT_MS)
+      const finish = (token: string) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(token)
+      }
+
       const widgetId = turnstile.render(container, {
         sitekey: SITEKEY,
         size: 'invisible',
@@ -79,17 +103,17 @@ export async function mintTurnstileToken(
           } catch {
             // ignore — best effort
           }
-          resolve(token)
+          finish(token)
         },
-        'error-callback': () => resolve(''),
-        'expired-callback': () => resolve(''),
+        'error-callback': () => finish(''),
+        'expired-callback': () => finish(''),
       })
       // Invisible widgets need an explicit execute() to start the
       // challenge. Wrapped in try in case of API drift.
       try {
         turnstile.execute(widgetId)
       } catch {
-        resolve('')
+        finish('')
       }
     })
   } catch (err) {

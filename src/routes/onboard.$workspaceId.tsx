@@ -149,6 +149,7 @@ function OnboardPage() {
         {stage === 'verify_dns' && workspace && (
           <VerifyDnsStep
             domain={workspace.domain}
+            workspaceId={workspaceId}
             onClaimed={() => setConnectStep(true)}
           />
         )}
@@ -408,9 +409,11 @@ function ConnectWidgetStep({ domain }: { domain: string }) {
 
 function VerifyDnsStep({
   domain,
+  workspaceId,
   onClaimed,
 }: {
   domain: string
+  workspaceId: string
   onClaimed: () => void
 }) {
   const [copied, setCopied] = useState<'name' | 'value' | null>(null)
@@ -432,6 +435,10 @@ function VerifyDnsStep({
             record_name: string
             record_value: string
             verified: boolean
+          }
+          email_match: {
+            available: boolean
+            reason?: string
           }
         }
       }
@@ -456,6 +463,30 @@ function VerifyDnsStep({
     },
     onSuccess: (data) => {
       if (data.verified) onClaimed()
+    },
+  })
+
+  // Email-match self-rescue: when the workspace-state endpoint
+  // reports email_match.available, hand the user a one-click
+  // shortcut to claim without DNS. Same eligibility as the
+  // auto-claim path on rename — the API endpoint runs identical
+  // gates server-side.
+  const claimEmail = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/onboard/claim-email', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      })
+      if (!res.ok) {
+        const t = await res.text().catch(() => '')
+        throw new Error(t || `HTTP ${res.status}`)
+      }
+      return (await res.json()) as { claimed: boolean }
+    },
+    onSuccess: (data) => {
+      if (data.claimed) onClaimed()
     },
   })
 
@@ -495,6 +526,38 @@ function VerifyDnsStep({
       </p>
 
       {record.isLoading && <Loading />}
+
+      {record.data?.claim_paths.email_match.available && (
+        <div
+          className="hi-card"
+          style={{
+            padding: 16,
+            marginBottom: 16,
+            borderColor: 'var(--accent)',
+            background: 'var(--surface-alt)',
+          }}
+        >
+          <div style={{ marginBottom: 10, fontSize: 14, lineHeight: 1.4 }}>
+            <strong>Skip DNS — claim with your email.</strong>{' '}
+            <span style={{ color: 'var(--fg-mute)' }}>
+              You're signed in with an email on <code>{domain}</code>, which
+              already proves ownership.
+            </span>
+          </div>
+          <Btn
+            variant="primary"
+            onClick={() => claimEmail.mutate()}
+            disabled={claimEmail.isPending}
+          >
+            {claimEmail.isPending ? 'Claiming…' : 'Claim instantly'}
+          </Btn>
+          {claimEmail.error && (
+            <div style={{ marginTop: 10 }}>
+              <ErrBox msg={(claimEmail.error as Error).message} />
+            </div>
+          )}
+        </div>
+      )}
 
       {recordName && recordValue && (
         <div className="hi-card hi-card-raised" style={{ padding: 20 }}>

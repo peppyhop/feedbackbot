@@ -35,6 +35,7 @@ import { Route as DashboardDomainBillingRouteImport } from './routes/dashboard.$
 import { Route as ApiScreenshotKeyRouteImport } from './routes/api/screenshot.$key'
 import { Route as ApiPublicTicketsRouteImport } from './routes/api/public.tickets'
 import { Route as ApiOnboardRenameRouteImport } from './routes/api/onboard/rename'
+import { Route as ApiOnboardClaimEmailRouteImport } from './routes/api/onboard/claim-email'
 import { Route as ApiMeWorkspacesRouteImport } from './routes/api/me.workspaces'
 import { Route as ApiCheckoutStartRouteImport } from './routes/api/checkout/start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -187,6 +188,11 @@ const ApiOnboardRenameRoute = ApiOnboardRenameRouteImport.update({
   path: '/api/onboard/rename',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOnboardClaimEmailRoute = ApiOnboardClaimEmailRouteImport.update({
+  id: '/api/onboard/claim-email',
+  path: '/api/onboard/claim-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMeWorkspacesRoute = ApiMeWorkspacesRouteImport.update({
   id: '/api/me/workspaces',
   path: '/api/me/workspaces',
@@ -315,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
+  '/api/onboard/claim-email': typeof ApiOnboardClaimEmailRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
@@ -361,6 +368,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
+  '/api/onboard/claim-email': typeof ApiOnboardClaimEmailRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
@@ -409,6 +417,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
+  '/api/onboard/claim-email': typeof ApiOnboardClaimEmailRoute
   '/api/onboard/rename': typeof ApiOnboardRenameRoute
   '/api/public/tickets': typeof ApiPublicTicketsRoute
   '/api/screenshot/$key': typeof ApiScreenshotKeyRoute
@@ -458,6 +467,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
+    | '/api/onboard/claim-email'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
@@ -504,6 +514,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
+    | '/api/onboard/claim-email'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
@@ -551,6 +562,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
+    | '/api/onboard/claim-email'
     | '/api/onboard/rename'
     | '/api/public/tickets'
     | '/api/screenshot/$key'
@@ -599,6 +611,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCheckoutStartRoute: typeof ApiCheckoutStartRoute
   ApiMeWorkspacesRoute: typeof ApiMeWorkspacesRoute
+  ApiOnboardClaimEmailRoute: typeof ApiOnboardClaimEmailRoute
   ApiOnboardRenameRoute: typeof ApiOnboardRenameRoute
   ApiPublicTicketsRoute: typeof ApiPublicTicketsRoute
   ApiScreenshotKeyRoute: typeof ApiScreenshotKeyRoute
@@ -790,6 +803,13 @@ declare module '@tanstack/react-router' {
       path: '/api/onboard/rename'
       fullPath: '/api/onboard/rename'
       preLoaderRoute: typeof ApiOnboardRenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboard/claim-email': {
+      id: '/api/onboard/claim-email'
+      path: '/api/onboard/claim-email'
+      fullPath: '/api/onboard/claim-email'
+      preLoaderRoute: typeof ApiOnboardClaimEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/me/workspaces': {
@@ -1032,6 +1052,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCheckoutStartRoute: ApiCheckoutStartRoute,
   ApiMeWorkspacesRoute: ApiMeWorkspacesRoute,
+  ApiOnboardClaimEmailRoute: ApiOnboardClaimEmailRoute,
   ApiOnboardRenameRoute: ApiOnboardRenameRoute,
   ApiPublicTicketsRoute: ApiPublicTicketsRoute,
   ApiScreenshotKeyRoute: ApiScreenshotKeyRoute,
