@@ -66,6 +66,8 @@ jobs:
       CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
       CF_TURNSTILE_WIDGET_ID: ${{ secrets.CF_TURNSTILE_WIDGET_ID }}
+      # API base baked into widget.js (preview's per-PR hostname).
+      VITE_FB_API_BASE: https://pr-${{ github.event.pull_request.number }}.preview.usefeedbackbot.com
     steps:
       - uses: actions/checkout@v4
 

@@ -1,18 +1,16 @@
 // Transport layer for the widget. Single POST to /api/ticket +
 // optional two-step screenshot upload.
 
-// API base is the origin the widget script itself was loaded from —
-// captured by the bootstrap IIFE before this module runs and stashed
-// on the global so we don't have to thread it through every call.
-// Falls back to same-origin (empty string) for the dev-server case
-// where the widget is loaded into the dashboard origin directly.
-declare global {
-  interface Window {
-    __FEEDBACKBOT_ORIGIN__?: string
-  }
-}
-const API_BASE =
-  (typeof window !== 'undefined' && window.__FEEDBACKBOT_ORIGIN__) || ''
+// API base is baked at build time by Vite's `define`. The earlier
+// approach of reading `document.currentScript.src` at runtime
+// turned out to be brittle on heavy host pages — by the time the
+// IIFE body executes through the rollup wrapper, currentScript is
+// often null and API_BASE silently falls back to relative URLs
+// (which hit the customer's own domain instead of ours, returning
+// 404 for /api/ticket). See vite.widget.config.ts for the env
+// var; default `https://usefeedbackbot.com` if unset.
+declare const __FB_API_BASE__: string
+const API_BASE = __FB_API_BASE__
 
 export type SubmitInput = {
   message: string

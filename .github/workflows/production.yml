@@ -50,6 +50,10 @@ jobs:
       CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
       CF_TURNSTILE_WIDGET_ID: ${{ secrets.CF_TURNSTILE_WIDGET_ID }}
+      # API base baked into widget.js by `pnpm build:widget`. The
+      # widget submits feedback to this URL; runtime origin
+      # detection in the widget proved brittle.
+      VITE_FB_API_BASE: https://usefeedbackbot.com
     steps:
       - uses: actions/checkout@v4
 

@@ -17,6 +17,15 @@ import { defineConfig } from 'vite'
 // TURNSTILE_SECRET is also unset).
 const TURNSTILE_SITEKEY = process.env.CF_TURNSTILE_WIDGET_ID ?? ''
 
+// API base — baked into the bundle so widget.js doesn't have to
+// derive it at runtime. Earlier we tried reading
+// document.currentScript.src in the IIFE; turned out to be brittle
+// on heavy host pages where currentScript is null by the time our
+// code runs through the rollup wrapper. Falls back to prod canonical
+// URL — preview deploys override via the workflow env.
+const API_BASE =
+  process.env.VITE_FB_API_BASE ?? 'https://usefeedbackbot.com'
+
 export default defineConfig({
   // Disable the default public-dir copy step — outDir IS public/, so
   // the copy would either no-op or chase its own tail. We only want
@@ -51,6 +60,7 @@ export default defineConfig({
     // define-substitution actually fires. The wrapped-in-quotes
     // form fails silently — see DECISIONS.md 2026-04-29.
     __FB_TURNSTILE_SITEKEY__: JSON.stringify(TURNSTILE_SITEKEY),
+    __FB_API_BASE__: JSON.stringify(API_BASE),
   },
   esbuild: {
     jsx: 'automatic',
