@@ -3,6 +3,11 @@ name: Production deploy
 on:
   push:
     branches: [main]
+  # Manual re-deploy. Use this after rotating a secret (where
+  # `gh run rerun <id>` would also work but only against the
+  # last completed run). `gh workflow run "Production deploy"
+  # --ref main` against the current main HEAD.
+  workflow_dispatch:
 
 # Only one production deploy at a time.
 concurrency:
