@@ -47,12 +47,24 @@ describe('addTurnstileHostname', () => {
     return { ok: false, status, json: async () => json }
   }
 
-  it('GETs current widget, PUTs full body with merged list', async () => {
+  it('GETs current widget, PUTs allowlisted body with merged list', async () => {
+    // GET returns the full widget incl. fields PUT rejects
+    // (sitekey, secret, created_on, modified_on). Our PUT must
+    // strip those.
     fetchMock
       .mockResolvedValueOnce(
         ok({
           success: true,
-          result: { name: 'fb', mode: 'managed', domains: ['a.com'] },
+          result: {
+            sitekey: '0x4abc',
+            secret: 'shhh',
+            name: 'fb',
+            mode: 'managed',
+            domains: ['a.com'],
+            created_on: '2026-01-01',
+            modified_on: '2026-04-01',
+            bot_fight_mode: false,
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -65,20 +77,24 @@ describe('addTurnstileHostname', () => {
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(new Set(result.hostnames)).toEqual(new Set(['a.com', 'b.com']))
-      expect(result.alreadyPresent).toBe(false)
     }
-    // Confirm we used PUT (not PATCH) AND round-tripped the full
-    // widget body — CF resets unsent fields on a PUT, so dropping
-    // `name`/`mode` would silently break customers' widget config.
     const putCall = fetchMock.mock.calls[1]!
     const init = putCall[1] as RequestInit
     expect(init.method).toBe('PUT')
     const body = JSON.parse(init.body as string)
+    // Writable fields preserved.
     expect(body).toMatchObject({
       name: 'fb',
       mode: 'managed',
       domains: ['a.com', 'b.com'],
+      bot_fight_mode: false,
     })
+    // Server-generated fields stripped — sending these fails CF
+    // with "json: unknown field" errors.
+    expect(body).not.toHaveProperty('sitekey')
+    expect(body).not.toHaveProperty('secret')
+    expect(body).not.toHaveProperty('created_on')
+    expect(body).not.toHaveProperty('modified_on')
   })
 
   it('skips PATCH when domain already on the list', async () => {

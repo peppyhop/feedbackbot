@@ -137,15 +137,37 @@ export async function addTurnstileHostname(
       }
       current.add(domain)
 
-      // 2) PUT the full widget back with the updated domains.
-      // Cloudflare's Turnstile API doesn't accept PATCH for token-
-      // authenticated calls (returns code 10405) — full PUT only.
-      // The body has to round-trip every existing field (name,
-      // mode, bot_fight_mode, etc.) or CF resets the unsent ones.
+      // 2) PUT with the updated domains.
+      //
+      // Cloudflare's Turnstile API doesn't accept PATCH for token
+      // auth (returns 10405) — full PUT only. Body shape is a
+      // strict allowlist: round-tripping the entire GET response
+      // gets rejected because GET includes server-generated
+      // fields PUT doesn't accept (sitekey, secret, created_on,
+      // modified_on, etc.). Whitelist only the writable fields
+      // documented for the update endpoint — anything we don't
+      // pass is preserved server-side AFAICT, but `name` and
+      // `mode` are de-facto required so we always carry them.
+      const writableKeys = [
+        'name',
+        'mode',
+        'domains',
+        'bot_fight_mode',
+        'clearance_level',
+        'region',
+        'offlabel',
+        'ephemeral_id',
+      ] as const
+      const putBody: Record<string, unknown> = {}
+      for (const key of writableKeys) {
+        if (key in widget) putBody[key] = widget[key]
+      }
+      putBody.domains = Array.from(current)
+
       const putRes = await cfFetch(widgetUrl, {
         method: 'PUT',
         headers: { ...auth, 'content-type': 'application/json' },
-        body: JSON.stringify({ ...widget, domains: Array.from(current) }),
+        body: JSON.stringify(putBody),
       })
       if (!putRes.ok) {
         const { reason, retry } = classify(putRes.status)
