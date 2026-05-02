@@ -10,6 +10,10 @@ export const WorkspaceStateResponseSchema = z.object({
     domain: z.string(),
     state: WorkspaceStateSchema,
     ticket_count: z.number().int().nonnegative(),
+    // Unix-ms of last successful Turnstile hostname add. NULL
+    // when claimed but not yet synced — dashboard shows a
+    // "widget setup pending" banner with a manual retry button.
+    turnstile_synced_at: z.number().int().nullable(),
   }),
   claim_paths: z.object({
     email_match: z.object({

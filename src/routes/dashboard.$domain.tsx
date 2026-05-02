@@ -1,6 +1,8 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 
-import { Chip, LogoMark, Tag } from '#/components/ui/brut'
+import { Btn, Chip, LogoMark, Tag } from '#/components/ui/brut'
 import { ThemeToggle } from '#/components/theme-toggle'
 import { seoMeta } from '#/lib/seo'
 
@@ -83,8 +85,101 @@ function DashboardLayout() {
       </aside>
 
       <main className="fb-shell-main">
+        <TurnstileSyncBanner domain={domain} />
         <Outlet />
       </main>
+    </div>
+  )
+}
+
+// Surfaces a "widget setup pending" banner when the workspace is
+// claimed but the Cloudflare Turnstile hostname add hasn't
+// succeeded yet. The customer can click "Retry now" to call
+// /api/admin/turnstile-resync — useful when the inline call at
+// claim time silently failed (e.g. operator's CF token had wrong
+// scope, or a transient CF API error).
+function TurnstileSyncBanner({ domain }: { domain: string }) {
+  const [retryError, setRetryError] = useState<string | null>(null)
+  const state = useQuery({
+    queryKey: ['workspace-turnstile', domain],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/workspace-state?domain=${encodeURIComponent(domain)}`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()) as {
+        workspace: { state: string; turnstile_synced_at: number | null }
+      }
+    },
+    refetchInterval: (q) =>
+      q.state.data?.workspace.turnstile_synced_at ? false : 30_000,
+  })
+
+  const resync = useMutation({
+    mutationFn: async () => {
+      setRetryError(null)
+      const res = await fetch(
+        `/api/admin/turnstile-resync?domain=${encodeURIComponent(domain)}`,
+        { method: 'POST', credentials: 'include' },
+      )
+      const body = (await res.json()) as
+        | { ok: true; synced_at: number }
+        | { ok: false; reason: string; details: unknown }
+      if (!body.ok) throw new Error(body.reason)
+      return body
+    },
+    onSuccess: () => state.refetch(),
+    onError: (err) => setRetryError((err as Error).message),
+  })
+
+  const ws = state.data?.workspace
+  if (!ws) return null
+  if (ws.state !== 'claimed') return null
+  if (ws.turnstile_synced_at) return null
+
+  return (
+    <div
+      style={{
+        margin: '12px 16px 0',
+        padding: '14px 16px',
+        border: '1.5px solid var(--accent)',
+        background: 'var(--surface-alt)',
+        fontSize: 14,
+        lineHeight: 1.5,
+      }}
+      role="alert"
+    >
+      <div style={{ marginBottom: 10 }}>
+        <strong>Widget setup pending.</strong>{' '}
+        <span style={{ color: 'var(--fg-mute)' }}>
+          Your domain is verified, but Cloudflare hasn't finished
+          provisioning the bot for <code>{domain}</code>. This
+          usually clears within a minute. If the retry below keeps
+          failing, the underlying error is shown — that's a config
+          issue on the FeedbackBot side, not yours.
+        </span>
+      </div>
+      <Btn
+        variant="primary"
+        size="sm"
+        onClick={() => resync.mutate()}
+        disabled={resync.isPending}
+      >
+        {resync.isPending ? 'Retrying…' : 'Retry now'}
+      </Btn>
+      {retryError && (
+        <div
+          className="h-mono"
+          style={{
+            marginTop: 10,
+            fontSize: 12,
+            color: 'var(--danger)',
+          }}
+        >
+          last error: {retryError}
+        </div>
+      )}
     </div>
   )
 }

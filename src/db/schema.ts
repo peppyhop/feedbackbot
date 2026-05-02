@@ -28,6 +28,10 @@ export const workspaces = sqliteTable(
     subscriptionStatus: text('subscription_status'),
     currentPeriodEnd: integer('current_period_end'),
     dodoCustomerId: text('dodo_customer_id'),
+    // Unix-ms of last successful Turnstile hostname add. NULL =
+    // never synced or last attempt failed. Cron reconciler keys
+    // off NULL+claimed; dashboard surfaces a banner.
+    turnstileSyncedAt: integer('turnstile_synced_at'),
   },
   (t) => [
     index('ws_state_idx').on(t.state),

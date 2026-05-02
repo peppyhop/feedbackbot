@@ -39,6 +39,8 @@ import { Route as ApiOnboardClaimEmailRouteImport } from './routes/api/onboard/c
 import { Route as ApiMeWorkspacesRouteImport } from './routes/api/me.workspaces'
 import { Route as ApiCheckoutStartRouteImport } from './routes/api/checkout/start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAdminTurnstileResyncRouteImport } from './routes/api/admin/turnstile-resync'
+import { Route as ApiAdminTurnstileDebugRouteImport } from './routes/api/admin/turnstile-debug'
 import { Route as ApiAdminTicketsRouteImport } from './routes/api/admin/tickets'
 import { Route as ApiAdminRedriveRouteImport } from './routes/api/admin/redrive'
 import { Route as ApiAdminMembersRouteImport } from './routes/api/admin/members'
@@ -208,6 +210,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminTurnstileResyncRoute = ApiAdminTurnstileResyncRouteImport.update({
+  id: '/api/admin/turnstile-resync',
+  path: '/api/admin/turnstile-resync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminTurnstileDebugRoute = ApiAdminTurnstileDebugRouteImport.update({
+  id: '/api/admin/turnstile-debug',
+  path: '/api/admin/turnstile-debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminTicketsRoute = ApiAdminTicketsRouteImport.update({
   id: '/api/admin/tickets',
   path: '/api/admin/tickets',
@@ -318,6 +330,8 @@ export interface FileRoutesByFullPath {
   '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
+  '/api/admin/turnstile-debug': typeof ApiAdminTurnstileDebugRoute
+  '/api/admin/turnstile-resync': typeof ApiAdminTurnstileResyncRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
@@ -365,6 +379,8 @@ export interface FileRoutesByTo {
   '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
+  '/api/admin/turnstile-debug': typeof ApiAdminTurnstileDebugRoute
+  '/api/admin/turnstile-resync': typeof ApiAdminTurnstileResyncRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
@@ -414,6 +430,8 @@ export interface FileRoutesById {
   '/api/admin/members': typeof ApiAdminMembersRouteWithChildren
   '/api/admin/redrive': typeof ApiAdminRedriveRoute
   '/api/admin/tickets': typeof ApiAdminTicketsRouteWithChildren
+  '/api/admin/turnstile-debug': typeof ApiAdminTurnstileDebugRoute
+  '/api/admin/turnstile-resync': typeof ApiAdminTurnstileResyncRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/checkout/start': typeof ApiCheckoutStartRoute
   '/api/me/workspaces': typeof ApiMeWorkspacesRoute
@@ -464,6 +482,8 @@ export interface FileRouteTypes {
     | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
+    | '/api/admin/turnstile-debug'
+    | '/api/admin/turnstile-resync'
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
@@ -511,6 +531,8 @@ export interface FileRouteTypes {
     | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
+    | '/api/admin/turnstile-debug'
+    | '/api/admin/turnstile-resync'
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
@@ -559,6 +581,8 @@ export interface FileRouteTypes {
     | '/api/admin/members'
     | '/api/admin/redrive'
     | '/api/admin/tickets'
+    | '/api/admin/turnstile-debug'
+    | '/api/admin/turnstile-resync'
     | '/api/auth/$'
     | '/api/checkout/start'
     | '/api/me/workspaces'
@@ -608,6 +632,8 @@ export interface RootRouteChildren {
   ApiAdminMembersRoute: typeof ApiAdminMembersRouteWithChildren
   ApiAdminRedriveRoute: typeof ApiAdminRedriveRoute
   ApiAdminTicketsRoute: typeof ApiAdminTicketsRouteWithChildren
+  ApiAdminTurnstileDebugRoute: typeof ApiAdminTurnstileDebugRoute
+  ApiAdminTurnstileResyncRoute: typeof ApiAdminTurnstileResyncRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCheckoutStartRoute: typeof ApiCheckoutStartRoute
   ApiMeWorkspacesRoute: typeof ApiMeWorkspacesRoute
@@ -833,6 +859,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/turnstile-resync': {
+      id: '/api/admin/turnstile-resync'
+      path: '/api/admin/turnstile-resync'
+      fullPath: '/api/admin/turnstile-resync'
+      preLoaderRoute: typeof ApiAdminTurnstileResyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/turnstile-debug': {
+      id: '/api/admin/turnstile-debug'
+      path: '/api/admin/turnstile-debug'
+      fullPath: '/api/admin/turnstile-debug'
+      preLoaderRoute: typeof ApiAdminTurnstileDebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/tickets': {
       id: '/api/admin/tickets'
       path: '/api/admin/tickets'
@@ -1049,6 +1089,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminMembersRoute: ApiAdminMembersRouteWithChildren,
   ApiAdminRedriveRoute: ApiAdminRedriveRoute,
   ApiAdminTicketsRoute: ApiAdminTicketsRouteWithChildren,
+  ApiAdminTurnstileDebugRoute: ApiAdminTurnstileDebugRoute,
+  ApiAdminTurnstileResyncRoute: ApiAdminTurnstileResyncRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCheckoutStartRoute: ApiCheckoutStartRoute,
   ApiMeWorkspacesRoute: ApiMeWorkspacesRoute,
