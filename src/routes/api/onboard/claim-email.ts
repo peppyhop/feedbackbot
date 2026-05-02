@@ -17,7 +17,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { env } from '#/env'
-import { makeDb, writeAudit } from '#/db/client'
+import { makeDb, markWorkspaceTurnstileSynced, writeAudit } from '#/db/client'
 import { member, user, workspaces } from '#/db/schema'
 import { sameRegistrableDomain } from '#/lib/domain'
 import { isFreemail, isStrict } from '#/lib/blocklist'
@@ -154,13 +154,39 @@ async function handle(request: Request): Promise<Response> {
 
     // Best-effort: add the domain to the Turnstile widget's
     // hostname allowlist so the customer's site can mint tokens.
-    const turnstileOk = await addTurnstileHostname(ws.domain, env)
-    if (!turnstileOk) {
-      console.warn('turnstile hostname add failed', { domain: ws.domain })
+    // Failure leaves turnstile_synced_at NULL — dashboard banner
+    // + cron reconciler pick it up.
+    const sync = await addTurnstileHostname(ws.domain, env)
+    await writeAudit(db, {
+      workspaceId: ws.id,
+      action: 'workspace.turnstile.sync',
+      actorUserId: userId,
+      metadata: sync.ok
+        ? { ok: true, alreadyPresent: sync.alreadyPresent, via: 'claim-email-endpoint' }
+        : {
+            ok: false,
+            reason: sync.reason,
+            details: sync.details,
+            via: 'claim-email-endpoint',
+          },
+    })
+    if (sync.ok) {
+      await markWorkspaceTurnstileSynced(db, ws.id)
+    } else {
+      console.warn('turnstile hostname add failed', {
+        domain: ws.domain,
+        reason: sync.reason,
+      })
     }
 
     return json(
-      { workspace_id: ws.id, claimed: true, already: false },
+      {
+        workspace_id: ws.id,
+        claimed: true,
+        already: false,
+        turnstile_synced: sync.ok,
+        turnstile_reason: sync.ok ? undefined : sync.reason,
+      },
       { headers: cors },
     )
   } catch (err) {

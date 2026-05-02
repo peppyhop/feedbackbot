@@ -4,7 +4,12 @@
 // cron failure can't take down the app.
 
 import { and, eq, inArray, isNotNull, lt, ne, or, sql } from 'drizzle-orm'
-import { makeDb } from '#/db/client'
+import {
+  listUnsyncedClaimedWorkspaces,
+  makeDb,
+  markWorkspaceTurnstileSynced,
+  writeAudit,
+} from '#/db/client'
 import {
   member,
   organization,
@@ -14,12 +19,27 @@ import {
 } from '#/db/schema'
 import type { Env } from '#/env'
 import { sentryOptions, withSentry } from '#/lib/sentry'
+import { addTurnstileHostname } from '#/lib/turnstile-admin'
 
 const ANON_TTL_DAYS = 3
 
 const handler: ExportedHandler<Env> = {
-  async scheduled(_controller, env) {
+  async scheduled(controller, env) {
     const db = makeDb(env.DB)
+
+    // Hourly: only run the Turnstile reconciler. Cheap (≤100
+    // workspaces, idempotent helper) so it's safe to run often;
+    // catches any claim path where the inline add failed.
+    if (controller.cron === '0 * * * *') {
+      await reconcileTurnstileSync(db, env)
+      return
+    }
+
+    // Daily (any other schedule we configure on this worker):
+    // analytics rollup + abandoned-anon sweep + reconciler as a
+    // safety net (in case the hourly trigger missed for ~hours).
+    await reconcileTurnstileSync(db, env)
+
     const since = Date.now() - 24 * 60 * 60 * 1000
 
     // Per-workspace counts for the trailing 24h.
@@ -149,6 +169,55 @@ async function sweepAbandonedAnons(db: ReturnType<typeof makeDb>) {
     skipped_paid: userIds.length - deletableUserIds.length,
     deleted_users: deletableUserIds.length,
     deleted_orgs: deletableOrgIds.length,
+  })
+}
+
+// Scan claimed workspaces whose `turnstile_synced_at` is NULL —
+// either the inline add at claim time failed, OR the column was
+// added before they were claimed. Re-run the helper. Bounded to
+// 100 per pass (capacity for ~2400/day at hourly cadence) so we
+// can never stampede the CF API.
+async function reconcileTurnstileSync(
+  db: ReturnType<typeof makeDb>,
+  env: Env,
+) {
+  const stuck = await listUnsyncedClaimedWorkspaces(db, 100)
+  if (stuck.length === 0) {
+    console.log('cron turnstile reconcile', { stuck: 0 })
+    return
+  }
+  let synced = 0
+  let failed = 0
+  for (const ws of stuck) {
+    const result = await addTurnstileHostname(ws.domain, env)
+    await writeAudit(db, {
+      workspaceId: ws.id,
+      action: 'workspace.turnstile.sync',
+      actorUserId: null,
+      metadata: result.ok
+        ? {
+            ok: true,
+            alreadyPresent: result.alreadyPresent,
+            via: 'cron-reconciler',
+          }
+        : {
+            ok: false,
+            reason: result.reason,
+            details: result.details,
+            via: 'cron-reconciler',
+          },
+    })
+    if (result.ok) {
+      await markWorkspaceTurnstileSynced(db, ws.id)
+      synced += 1
+    } else {
+      failed += 1
+    }
+  }
+  console.log('cron turnstile reconcile', {
+    stuck: stuck.length,
+    synced,
+    failed,
   })
 }
 

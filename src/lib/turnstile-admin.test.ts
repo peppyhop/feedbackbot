@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   addTurnstileHostname,
+  getTurnstileWidget,
   turnstileAdminConfigured,
 } from './turnstile-admin'
 
@@ -10,6 +11,14 @@ const ENV = {
   CF_ACCOUNT_ID: 'acct_1',
   CF_TURNSTILE_WIDGET_ID: '0x4abc',
 }
+
+// Sentry is imported by the module — stub captureMessage so tests
+// don't need a real DSN. Spies on the same vi.fn so we can assert.
+vi.mock('#/lib/sentry', () => ({
+  Sentry: { captureMessage: vi.fn() },
+  withSentry: (_opts: unknown, h: unknown) => h,
+  sentryOptions: () => undefined,
+}))
 
 describe('turnstileAdminConfigured', () => {
   it('true only when all three vars are set', () => {
@@ -31,54 +40,147 @@ describe('addTurnstileHostname', () => {
     globalThis.fetch = realFetch
   })
 
-  it('GETs current domains, PATCHes with the merged list', async () => {
+  function ok(json: unknown) {
+    return { ok: true, json: async () => json }
+  }
+  function bad(status: number, json: unknown) {
+    return { ok: false, status, json: async () => json }
+  }
+
+  it('GETs current domains, PATCHes with merged list, returns ok:true', async () => {
     fetchMock
-      .mockResolvedValueOnce({
-        json: async () => ({ success: true, result: { domains: ['a.com'] } }),
-      })
-      .mockResolvedValueOnce({
-        json: async () => ({ success: true, result: {} }),
-      })
-    const ok = await addTurnstileHostname('b.com', ENV)
-    expect(ok).toBe(true)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    const [, patchInit] = fetchMock.mock.calls[1]!
-    const body = JSON.parse((patchInit as RequestInit).body as string)
-    expect(new Set(body.domains)).toEqual(new Set(['a.com', 'b.com']))
+      .mockResolvedValueOnce(ok({ success: true, result: { domains: ['a.com'] } }))
+      .mockResolvedValueOnce(
+        ok({ success: true, result: { domains: ['a.com', 'b.com'] } }),
+      )
+    const result = await addTurnstileHostname('b.com', ENV)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(new Set(result.hostnames)).toEqual(new Set(['a.com', 'b.com']))
+      expect(result.alreadyPresent).toBe(false)
+    }
   })
 
   it('skips PATCH when domain already on the list', async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        success: true,
-        result: { domains: ['a.com', 'b.com'] },
-      }),
-    })
-    const ok = await addTurnstileHostname('a.com', ENV)
-    expect(ok).toBe(true)
+    fetchMock.mockResolvedValueOnce(
+      ok({ success: true, result: { domains: ['a.com', 'b.com'] } }),
+    )
+    const result = await addTurnstileHostname('a.com', ENV)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.alreadyPresent).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('returns false (graceful) when env is unset', async () => {
-    const ok = await addTurnstileHostname('a.com', {})
-    expect(ok).toBe(false)
+  it('returns not_configured when env is incomplete', async () => {
+    const result = await addTurnstileHostname('a.com', {})
+    expect(result).toEqual({
+      ok: false,
+      reason: 'not_configured',
+      details: null,
+    })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('returns false when CF responds with success:false', async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        success: false,
-        errors: [{ code: 7003, message: 'no route' }],
-      }),
+  it('classifies 401 as auth_failed (no retry)', async () => {
+    fetchMock.mockResolvedValueOnce(bad(401, { error: 'unauth' }))
+    const result = await addTurnstileHostname('a.com', ENV)
+    expect(result).toEqual({
+      ok: false,
+      reason: 'auth_failed',
+      details: { error: 'unauth' },
     })
-    const ok = await addTurnstileHostname('a.com', ENV)
-    expect(ok).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('returns false when fetch throws', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('boom'))
-    const ok = await addTurnstileHostname('a.com', ENV)
-    expect(ok).toBe(false)
+  it('classifies 404 as widget_not_found (no retry)', async () => {
+    fetchMock.mockResolvedValueOnce(bad(404, { error: 'no widget' }))
+    const result = await addTurnstileHostname('a.com', ENV)
+    expect(result).toEqual({
+      ok: false,
+      reason: 'widget_not_found',
+      details: { error: 'no widget' },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  // Retry tests use real timers — exponential backoff is 1+2+4s
+  // before the final attempt. Per-test timeout bumped to 12s.
+  it(
+    'retries on 500 then succeeds',
+    async () => {
+      fetchMock
+        .mockResolvedValueOnce(bad(500, { error: 'boom' }))
+        .mockResolvedValueOnce(
+          ok({ success: true, result: { domains: [] } }),
+        )
+        .mockResolvedValueOnce(
+          ok({ success: true, result: { domains: ['a.com'] } }),
+        )
+      const result = await addTurnstileHostname('a.com', ENV)
+      expect(result.ok).toBe(true)
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+    },
+    12_000,
+  )
+
+  it(
+    'returns network_error after retry exhaustion',
+    async () => {
+      fetchMock.mockRejectedValue(new Error('boom'))
+      const result = await addTurnstileHostname('a.com', ENV)
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.reason).toBe('network_error')
+      // 1 initial + 3 retries = 4 attempts
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+    },
+    12_000,
+  )
+
+  it('captures Sentry message on terminal failure', async () => {
+    const { Sentry } = await import('#/lib/sentry')
+    fetchMock.mockResolvedValueOnce(bad(401, { error: 'unauth' }))
+    await addTurnstileHostname('a.com', ENV)
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'turnstile-admin: hostname add failed',
+      expect.objectContaining({ level: 'error' }),
+    )
+  })
+})
+
+describe('getTurnstileWidget', () => {
+  const realFetch = globalThis.fetch
+  const fetchMock = vi.fn()
+  beforeEach(() => {
+    fetchMock.mockReset()
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+  })
+  afterEach(() => {
+    globalThis.fetch = realFetch
+  })
+
+  it('returns the raw widget on success', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, result: { domains: ['a.com'] } }),
+    })
+    const result = await getTurnstileWidget(ENV)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.widget).toEqual({
+        success: true,
+        result: { domains: ['a.com'] },
+      })
+    }
+  })
+
+  it('classifies the failure on error', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'forbidden' }),
+    })
+    const result = await getTurnstileWidget(ENV)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toBe('auth_failed')
   })
 })

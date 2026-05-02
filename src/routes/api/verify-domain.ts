@@ -5,6 +5,7 @@ import {
   getWorkspaceByDomain,
   makeDb,
   markWorkspaceClaimed,
+  markWorkspaceTurnstileSynced,
   writeAudit,
 } from '#/db/client'
 import { normalizeDomain } from '#/lib/domain'
@@ -62,15 +63,26 @@ async function handle(request: Request): Promise<Response> {
 
     // DNS verified — register the domain with Cloudflare Turnstile
     // so the widget can mint tokens cross-origin from the
-    // customer's site. Awaited (not fire-and-forget) because Worker
-    // pending promises are cancelled at response time without
-    // waitUntil. Adds ~2 round-trips of latency to a once-per-
-    // workspace call; helper logs and returns false on failure so
-    // verification still completes — the widget will 403 from this
-    // hostname until reconciled.
-    const turnstileOk = await addTurnstileHostname(domain, env)
-    if (!turnstileOk) {
-      console.warn('turnstile hostname add failed', { domain })
+    // customer's site. Awaited (Worker pending promises cancel at
+    // response time without waitUntil), but never blocks the claim
+    // — failure leaves turnstile_synced_at NULL so the dashboard
+    // banner + cron reconciler can pick it up.
+    const sync = await addTurnstileHostname(domain, env)
+    await writeAudit(db, {
+      workspaceId: workspace.id,
+      action: 'workspace.turnstile.sync',
+      actorUserId: userId,
+      metadata: sync.ok
+        ? { ok: true, alreadyPresent: sync.alreadyPresent, via: 'verify-domain' }
+        : { ok: false, reason: sync.reason, details: sync.details, via: 'verify-domain' },
+    })
+    if (sync.ok) {
+      await markWorkspaceTurnstileSynced(db, workspace.id)
+    } else {
+      console.warn('turnstile hostname add failed', {
+        domain,
+        reason: sync.reason,
+      })
     }
 
     // DNS verified — transition workspace to claimed. First caller

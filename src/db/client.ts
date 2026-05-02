@@ -74,6 +74,7 @@ export async function createPendingWorkspace(
     subscriptionStatus: null,
     currentPeriodEnd: null,
     dodoCustomerId: null,
+    turnstileSyncedAt: null,
   }
   await db.insert(workspaces).values(row)
   return row
@@ -88,6 +89,39 @@ export async function markWorkspaceClaimed(
     .update(workspaces)
     .set({ state: 'claimed', betterAuthOrgId: orgId, claimedAt: Date.now() })
     .where(eq(workspaces.id, workspaceId))
+}
+
+// Stamped after a successful Cloudflare Turnstile hostname add.
+// Failure path leaves the column NULL — the dashboard banner +
+// cron reconciler key off NULL claimed workspaces.
+export async function markWorkspaceTurnstileSynced(
+  db: DB,
+  workspaceId: string,
+  syncedAt = Date.now(),
+): Promise<void> {
+  await db
+    .update(workspaces)
+    .set({ turnstileSyncedAt: syncedAt })
+    .where(eq(workspaces.id, workspaceId))
+}
+
+// Reconciler query: claimed workspaces that haven't been synced
+// (or whose previous sync failed). Bounded so a single cron run
+// can never stampede the CF API.
+export async function listUnsyncedClaimedWorkspaces(
+  db: DB,
+  limit = 100,
+): Promise<Array<{ id: string; domain: string }>> {
+  return db
+    .select({ id: workspaces.id, domain: workspaces.domain })
+    .from(workspaces)
+    .where(
+      and(
+        eq(workspaces.state, 'claimed'),
+        sql`${workspaces.turnstileSyncedAt} IS NULL`,
+      ),
+    )
+    .limit(limit)
 }
 
 // ── tickets ──────────────────────────────────────────────────────

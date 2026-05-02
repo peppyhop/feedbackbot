@@ -253,9 +253,17 @@ await Worker('cron-worker', {
   bindings: {
     DB: db,
     ANALYTICS_KV: analyticsKv,
+    // Turnstile reconciler needs CF admin access — same env vars
+    // the main worker uses for the inline add path.
+    CF_API_TOKEN,
+    CF_ACCOUNT_ID,
+    CF_TURNSTILE_WIDGET_ID,
+    SENTRY_DSN,
   },
-  // Daily at 05:00 UTC — quiet window worldwide.
-  crons: ['0 5 * * *'],
+  // - Daily 05:00 UTC: ticket-rollup + anon sweep + reconciler.
+  // - Hourly: just the Turnstile reconciler. Cheap (≤100 stuck
+  //   workspaces, idempotent) and brings up customer claims fast.
+  crons: ['0 5 * * *', '0 * * * *'],
 })
 
 await Worker('fanout-worker', {

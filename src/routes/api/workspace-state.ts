@@ -74,6 +74,7 @@ async function handle(request: Request): Promise<Response> {
         domain: workspace.domain,
         state: workspace.state as 'pending' | 'claimed' | 'suspended',
         ticket_count: workspace.ticketCount,
+        turnstile_synced_at: workspace.turnstileSyncedAt ?? null,
       },
       claim_paths: {
         email_match: {

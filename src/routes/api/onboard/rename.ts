@@ -35,7 +35,7 @@ import {
 } from '#/lib/http'
 import { withRequestMetrics } from '#/lib/analytics'
 import { requireSession } from '#/lib/admin-auth'
-import { writeAudit } from '#/db/client'
+import { markWorkspaceTurnstileSynced, writeAudit } from '#/db/client'
 import { addTurnstileHostname } from '#/lib/turnstile-admin'
 
 const RenameSchema = z.object({
@@ -228,10 +228,34 @@ async function handle(request: Request): Promise<Response> {
         })
         // Best-effort: add the domain to the Turnstile widget's
         // hostname allowlist so the customer's site can mint
-        // tokens. Mirror of what verify-domain does.
-        const turnstileOk = await addTurnstileHostname(domain, env)
-        if (!turnstileOk) {
-          console.warn('turnstile hostname add failed', { domain })
+        // tokens. Mirror of what verify-domain does — never blocks
+        // the claim, dashboard banner + cron reconciler key off
+        // the NULL turnstile_synced_at column on failure.
+        const sync = await addTurnstileHostname(domain, env)
+        await writeAudit(db, {
+          workspaceId: ws.id,
+          action: 'workspace.turnstile.sync',
+          actorUserId: userId,
+          metadata: sync.ok
+            ? {
+                ok: true,
+                alreadyPresent: sync.alreadyPresent,
+                via: 'rename-auto-claim',
+              }
+            : {
+                ok: false,
+                reason: sync.reason,
+                details: sync.details,
+                via: 'rename-auto-claim',
+              },
+        })
+        if (sync.ok) {
+          await markWorkspaceTurnstileSynced(db, ws.id)
+        } else {
+          console.warn('turnstile hostname add failed', {
+            domain,
+            reason: sync.reason,
+          })
         }
         claimed = true
       }
