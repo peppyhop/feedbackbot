@@ -279,7 +279,7 @@ function IntegrationCard({
               domain={domain}
             />
           ) : (
-            <WebhookRoutesReadonly
+            <WebhookEditor
               integrationId={integration.id}
               domain={domain}
             />
@@ -492,45 +492,242 @@ function SlackRoutesEditor({
   )
 }
 
-function WebhookRoutesReadonly({
+function WebhookEditor({
   integrationId,
   domain,
 }: {
   integrationId: string
   domain: string
 }) {
+  const qc = useQueryClient()
   const routes = useIntegrationRoutes(integrationId, domain)
-  if (routes.isLoading) {
-    return (
-      <div style={{ color: 'var(--fg-mute)', fontSize: 13 }}>Loading…</div>
-    )
+  const [draft, setDraft] = useState<Record<TicketKind, boolean>>({
+    bug: false,
+    feature: false,
+    query: false,
+  })
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    if (!routes.data || hydrated) return
+    const next: Record<TicketKind, boolean> = { bug: false, feature: false, query: false }
+    for (const r of routes.data.routes) {
+      if (r.enabled && (r.ticket_type === 'bug' || r.ticket_type === 'feature' || r.ticket_type === 'query')) {
+        next[r.ticket_type] = true
+      }
+    }
+    setDraft(next)
+    setHydrated(true)
+  }, [routes.data, hydrated])
+
+  // PUT all routes — server replaces the full set, so we send what
+  // we want enabled + omit the rest.
+  const saveRoutes = useMutation({
+    mutationFn: async (next: Record<TicketKind, boolean>) => {
+      const desired = TICKET_KINDS.filter((k) => next[k]).map((k) => ({
+        ticket_type: k,
+        config: {},
+      }))
+      const res = await fetch(
+        `/api/admin/integrations/${integrationId}/routes?domain=${encodeURIComponent(domain)}`,
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ routes: desired }),
+        },
+      )
+      if (!res.ok) {
+        const t = await res.text().catch(() => '')
+        throw new Error(t || `HTTP ${res.status}`)
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['integration-routes', integrationId, domain] })
+    },
+  })
+
+  const setKind = (k: TicketKind, on: boolean) => {
+    const next = { ...draft, [k]: on }
+    setDraft(next)
+    saveRoutes.mutate(next)
   }
-  const list = routes.data?.routes ?? []
+
+  // POST /test-send: drives the existing dispatcher with a synthetic
+  // payload and surfaces the response code/body inline.
+  const [testResult, setTestResult] = useState<
+    | null
+    | {
+        ok: boolean
+        response_code: number | null
+        response_body: string | null
+        error: string | null
+      }
+  >(null)
+  const testSend = useMutation({
+    mutationFn: async () => {
+      setTestResult(null)
+      const res = await fetch(
+        `/api/admin/integrations/${integrationId}/test-send?domain=${encodeURIComponent(domain)}`,
+        { method: 'POST', credentials: 'include' },
+      )
+      const body = (await res.json()) as {
+        ok?: boolean
+        response_code?: number | null
+        response_body?: string | null
+        error?: string | null
+      }
+      if (!res.ok && !('ok' in body)) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+      return body as {
+        ok: boolean
+        response_code: number | null
+        response_body: string | null
+        error: string | null
+      }
+    },
+    onSuccess: (data) => setTestResult(data),
+  })
+
   return (
-    <div>
-      <div
-        className="h-mono"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <div
+          className="h-mono"
+          style={{
+            fontSize: 11,
+            color: 'var(--fg-mute)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            marginBottom: 8,
+          }}
+        >
+          Routes
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {TICKET_KINDS.map((k) => (
+            <label
+              key={k}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 10px',
+                border: '1.5px solid var(--border)',
+                background: draft[k] ? 'var(--accent)' : 'transparent',
+                color: draft[k] ? 'var(--accent-ink)' : 'var(--fg)',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={draft[k]}
+                onChange={(e) =>
+                  setKind(k, (e.currentTarget as HTMLInputElement).checked)
+                }
+                style={{ display: 'none' }}
+              />
+              {draft[k] ? '✓' : '○'} {k}
+            </label>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--fg-faint)', marginTop: 6 }}>
+          Tickets matching the selected types fire this webhook. Saved
+          automatically when you toggle.
+        </div>
+      </div>
+
+      <div>
+        <div
+          className="h-mono"
+          style={{
+            fontSize: 11,
+            color: 'var(--fg-mute)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            marginBottom: 8,
+          }}
+        >
+          Test delivery
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Btn
+            size="sm"
+            variant="primary"
+            onClick={() => testSend.mutate()}
+            disabled={testSend.isPending}
+          >
+            {testSend.isPending ? 'Sending…' : 'Send test event'}
+          </Btn>
+          {testResult && (
+            <span
+              className="h-mono"
+              style={{
+                fontSize: 12,
+                color: testResult.ok ? 'var(--ok)' : 'var(--danger)',
+              }}
+            >
+              {testResult.ok ? '✓' : '✗'}{' '}
+              {testResult.response_code ?? testResult.error ?? 'no response'}
+            </span>
+          )}
+        </div>
+        {testResult && testResult.response_body && (
+          <pre
+            style={{
+              marginTop: 8,
+              padding: 8,
+              border: '1.5px solid var(--border-soft)',
+              background: 'var(--surface)',
+              fontSize: 11,
+              maxHeight: 120,
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {testResult.response_body}
+          </pre>
+        )}
+        {testSend.error && (
+          <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 6 }}>
+            {(testSend.error as Error).message}
+          </div>
+        )}
+      </div>
+
+      <details
         style={{
-          fontSize: 11,
+          fontSize: 13,
           color: 'var(--fg-mute)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
+          padding: 8,
+          border: '1.5px solid var(--border-soft)',
         }}
       >
-        Routes
-      </div>
-      {list.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--fg-faint)' }}>
-          No routes configured — webhook will never fire.
-        </div>
-      ) : (
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-          {list.map((r) => (
-            <li key={r.id}>{r.ticket_type}</li>
-          ))}
-        </ul>
-      )}
+        <summary style={{ cursor: 'pointer' }}>
+          How to verify the signature on your side
+        </summary>
+        <pre
+          style={{
+            marginTop: 8,
+            fontSize: 11,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >{`# Headers we send on every delivery:
+#   x-feedback-signature: sha256=<hex>
+#   x-feedback-timestamp: <unix-seconds>
+# Body: JSON OutboundTicketPayload
+
+# Verify in pseudo-code:
+sig    = request.headers["x-feedback-signature"].split("=", 1)[1]
+ts     = request.headers["x-feedback-timestamp"]
+body   = request.raw_body
+expect = hmac_sha256_hex(WEBHOOK_SECRET, ts + "." + body)
+if not constant_time_eq(sig, expect): reject 401
+if abs(now() - int(ts)) > 300: reject 401  # replay window`}</pre>
+      </details>
     </div>
   )
 }

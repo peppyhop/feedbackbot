@@ -55,6 +55,7 @@ import { Route as ApiAdminTicketsIdRouteImport } from './routes/api/admin/ticket
 import { Route as ApiAdminMembersMemberIdRouteImport } from './routes/api/admin/members.$memberId'
 import { Route as ApiAdminInvitationsInvitationIdRouteImport } from './routes/api/admin/invitations.$invitationId'
 import { Route as ApiAdminIntegrationsIdRouteImport } from './routes/api/admin/integrations.$id'
+import { Route as ApiAdminIntegrationsIdTestSendRouteImport } from './routes/api/admin/integrations.$id.test-send'
 import { Route as ApiAdminIntegrationsIdSlackChannelsRouteImport } from './routes/api/admin/integrations.$id.slack-channels'
 import { Route as ApiAdminIntegrationsIdRoutesRouteImport } from './routes/api/admin/integrations.$id.routes'
 
@@ -294,6 +295,12 @@ const ApiAdminIntegrationsIdRoute = ApiAdminIntegrationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAdminIntegrationsRoute,
 } as any)
+const ApiAdminIntegrationsIdTestSendRoute =
+  ApiAdminIntegrationsIdTestSendRouteImport.update({
+    id: '/test-send',
+    path: '/test-send',
+    getParentRoute: () => ApiAdminIntegrationsIdRoute,
+  } as any)
 const ApiAdminIntegrationsIdSlackChannelsRoute =
   ApiAdminIntegrationsIdSlackChannelsRouteImport.update({
     id: '/slack-channels',
@@ -356,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/$domain/tickets/$id': typeof DashboardDomainTicketsIdRoute
   '/api/admin/integrations/$id/routes': typeof ApiAdminIntegrationsIdRoutesRoute
   '/api/admin/integrations/$id/slack-channels': typeof ApiAdminIntegrationsIdSlackChannelsRoute
+  '/api/admin/integrations/$id/test-send': typeof ApiAdminIntegrationsIdTestSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -405,6 +413,7 @@ export interface FileRoutesByTo {
   '/dashboard/$domain/tickets/$id': typeof DashboardDomainTicketsIdRoute
   '/api/admin/integrations/$id/routes': typeof ApiAdminIntegrationsIdRoutesRoute
   '/api/admin/integrations/$id/slack-channels': typeof ApiAdminIntegrationsIdSlackChannelsRoute
+  '/api/admin/integrations/$id/test-send': typeof ApiAdminIntegrationsIdTestSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -456,6 +465,7 @@ export interface FileRoutesById {
   '/dashboard/$domain/tickets/$id': typeof DashboardDomainTicketsIdRoute
   '/api/admin/integrations/$id/routes': typeof ApiAdminIntegrationsIdRoutesRoute
   '/api/admin/integrations/$id/slack-channels': typeof ApiAdminIntegrationsIdSlackChannelsRoute
+  '/api/admin/integrations/$id/test-send': typeof ApiAdminIntegrationsIdTestSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/tickets/$id'
     | '/api/admin/integrations/$id/routes'
     | '/api/admin/integrations/$id/slack-channels'
+    | '/api/admin/integrations/$id/test-send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -557,6 +568,7 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/tickets/$id'
     | '/api/admin/integrations/$id/routes'
     | '/api/admin/integrations/$id/slack-channels'
+    | '/api/admin/integrations/$id/test-send'
   id:
     | '__root__'
     | '/'
@@ -607,6 +619,7 @@ export interface FileRouteTypes {
     | '/dashboard/$domain/tickets/$id'
     | '/api/admin/integrations/$id/routes'
     | '/api/admin/integrations/$id/slack-channels'
+    | '/api/admin/integrations/$id/test-send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -971,6 +984,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminIntegrationsIdRouteImport
       parentRoute: typeof ApiAdminIntegrationsRoute
     }
+    '/api/admin/integrations/$id/test-send': {
+      id: '/api/admin/integrations/$id/test-send'
+      path: '/test-send'
+      fullPath: '/api/admin/integrations/$id/test-send'
+      preLoaderRoute: typeof ApiAdminIntegrationsIdTestSendRouteImport
+      parentRoute: typeof ApiAdminIntegrationsIdRoute
+    }
     '/api/admin/integrations/$id/slack-channels': {
       id: '/api/admin/integrations/$id/slack-channels'
       path: '/slack-channels'
@@ -1017,6 +1037,7 @@ const DashboardDomainRouteWithChildren = DashboardDomainRoute._addFileChildren(
 interface ApiAdminIntegrationsIdRouteChildren {
   ApiAdminIntegrationsIdRoutesRoute: typeof ApiAdminIntegrationsIdRoutesRoute
   ApiAdminIntegrationsIdSlackChannelsRoute: typeof ApiAdminIntegrationsIdSlackChannelsRoute
+  ApiAdminIntegrationsIdTestSendRoute: typeof ApiAdminIntegrationsIdTestSendRoute
 }
 
 const ApiAdminIntegrationsIdRouteChildren: ApiAdminIntegrationsIdRouteChildren =
@@ -1024,6 +1045,7 @@ const ApiAdminIntegrationsIdRouteChildren: ApiAdminIntegrationsIdRouteChildren =
     ApiAdminIntegrationsIdRoutesRoute: ApiAdminIntegrationsIdRoutesRoute,
     ApiAdminIntegrationsIdSlackChannelsRoute:
       ApiAdminIntegrationsIdSlackChannelsRoute,
+    ApiAdminIntegrationsIdTestSendRoute: ApiAdminIntegrationsIdTestSendRoute,
   }
 
 const ApiAdminIntegrationsIdRouteWithChildren =
