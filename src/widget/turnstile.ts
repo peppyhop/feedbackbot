@@ -71,33 +71,54 @@ const MINT_TIMEOUT_MS = 5000
 // (including graceful mode and timeout) — caller should still
 // try to submit; the server will reject if TURNSTILE_SECRET is
 // set, and the widget will surface that as an inline error.
-export async function mintTurnstileToken(
-  container: HTMLElement,
-): Promise<string> {
+//
+// The Turnstile container is appended to document.body (light
+// DOM), NOT to the widget's Shadow DOM. Turnstile's internal
+// child iframes use postMessage to communicate with the parent
+// window; rendering inside Shadow DOM trips a documented bug
+// where the child iframe specifies the wrong target origin and
+// messages get silently dropped (manifests as "mint timed out"
+// + "postMessage origin mismatch" warnings in console).
+export async function mintTurnstileToken(): Promise<string> {
   if (!TURNSTILE_ENABLED) return ''
+  let container: HTMLDivElement | null = null
   try {
     const turnstile = await loadScript()
+    // Hidden, off-screen container in the light DOM. Removed
+    // after the callback fires (or timeout).
+    container = document.createElement('div')
+    container.setAttribute('data-feedbackbot-turnstile', '1')
+    container.style.cssText =
+      'position:fixed;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden;'
+    document.body.appendChild(container)
+
+    const cleanup = () => {
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container)
+      }
+    }
+
     return await new Promise<string>((resolve) => {
       let settled = false
       const timer = setTimeout(() => {
         if (settled) return
         settled = true
         console.warn('feedbackbot: turnstile mint timed out')
+        cleanup()
         resolve('')
       }, MINT_TIMEOUT_MS)
       const finish = (token: string) => {
         if (settled) return
         settled = true
         clearTimeout(timer)
+        cleanup()
         resolve(token)
       }
 
-      const widgetId = turnstile.render(container, {
+      const widgetId = turnstile.render(container!, {
         sitekey: SITEKEY,
         size: 'invisible',
         callback: (token) => {
-          // Clean up the rendered widget so the next submission
-          // mints a fresh token from a fresh render.
           try {
             turnstile.remove(widgetId)
           } catch {
@@ -108,8 +129,6 @@ export async function mintTurnstileToken(
         'error-callback': () => finish(''),
         'expired-callback': () => finish(''),
       })
-      // Invisible widgets need an explicit execute() to start the
-      // challenge. Wrapped in try in case of API drift.
       try {
         turnstile.execute(widgetId)
       } catch {
@@ -117,6 +136,9 @@ export async function mintTurnstileToken(
       }
     })
   } catch (err) {
+    if (container && container.parentNode) {
+      container.parentNode.removeChild(container)
+    }
     console.warn('feedbackbot: turnstile mint failed', err)
     return ''
   }
